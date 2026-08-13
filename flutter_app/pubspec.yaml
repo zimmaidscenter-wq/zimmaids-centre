@@ -1,0 +1,28 @@
+name: zimbabwe_maids_centre
+description: "A production-ready Flutter mobile application for Zimbabwe Maids Centre featuring Clean Architecture, Riverpod, Firebase, and Material Design 3."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.2.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_riverpod: ^2.4.9
+  firebase_core: ^2.24.2
+  firebase_auth: ^4.16.0
+  cloud_firestore: ^4.14.0
+  google_fonts: ^6.1.0
+  flutter_svg: ^2.0.9
+  fl_chart: ^0.66.0
+  intl: ^0.19.0
+  cupertino_icons: ^1.0.6
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true

@@ -1,0 +1,441 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Core identity record for all authenticated platform accounts in Zimbabwe Maids Centre.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email", "description": "Account email address" },
+        "phone": { "type": "string", "description": "E.164 phone number e.g. +263771234567" },
+        "fullName": { "type": "string", "description": "Legal full name" },
+        "role": { "type": "string", "enum": ["worker", "employer", "agency", "admin", "support"], "description": "Account system role" },
+        "avatarUrl": { "type": "string", "description": "HTTPS profile picture link" },
+        "city": { "type": "string", "description": "City of residence e.g. Harare, Bulawayo, Mutare" },
+        "suburb": { "type": "string", "description": "Suburb / Neighborhood e.g. Avondale, Borrowdale, Nkulumane" },
+        "nationalId": { "type": "string", "description": "Zimbabwean National ID Number e.g. 63-1234567-A-63" },
+        "isPhoneVerified": { "type": "boolean", "description": "SMS OTP status" },
+        "isEmailVerified": { "type": "boolean", "description": "Email verification status" },
+        "status": { "type": "string", "enum": ["active", "suspended", "pending_verification", "deactivated"] },
+        "preferredLanguage": { "type": "string", "enum": ["en", "sn", "nd", "ny"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "fullName", "phone", "role", "city", "status"]
+    },
+    "Worker": {
+      "title": "Worker Profile",
+      "description": "Extended domain profile for domestic workers, artisans, and caregivers.",
+      "type": "object",
+      "properties": {
+        "workerId": { "type": "string", "description": "Worker ID matching User UID" },
+        "userId": { "type": "string", "description": "Foreign key reference to User document" },
+        "primaryCategory": { "type": "string", "enum": ["Housekeeper", "Nanny", "Cook", "Elderly Caregiver", "Gardener", "Driver", "Electrician", "Plumber", "Painter"] },
+        "skills": { "type": "array", "description": "List of specialized technical & domestic skills" },
+        "experienceYears": { "type": "number", "description": "Years of experience" },
+        "hourlyRateUSD": { "type": "number", "description": "Hourly compensation in USD" },
+        "monthlyRateUSD": { "type": "number", "description": "Monthly full-time compensation in USD" },
+        "bio": { "type": "string", "description": "Professional summary" },
+        "audioBioUrl": { "type": "string", "description": "Voice profile recording for accessible review" },
+        "policeClearanceStatus": { "type": "string", "enum": ["verified", "pending", "not_submitted", "expired"] },
+        "policeClearanceDocUrl": { "type": "string", "description": "Secure Cloud Storage URL for ZRP certificate" },
+        "agencyId": { "type": "string", "description": "Optional managing placement agency ID" },
+        "availabilityStatus": { "type": "string", "enum": ["available", "placed", "interviewing", "on_leave"] },
+        "ratingAverage": { "type": "number", "description": "Aggregated rating score (1.00 to 5.00)" },
+        "ratingCount": { "type": "number", "description": "Total completed reviews" },
+        "trustScore": { "type": "number", "description": "AI Trust Index score from 0 to 100" },
+        "verifiedBadge": { "type": "boolean", "description": "Official green verified tick" },
+        "latitude": { "type": "number" },
+        "longitude": { "type": "number" },
+        "geohash": { "type": "string", "description": "Spatial geohash for proximity indexing" }
+      },
+      "required": ["workerId", "userId", "primaryCategory", "availabilityStatus", "ratingAverage"]
+    },
+    "Employer": {
+      "title": "Employer Profile",
+      "description": "Extended domain profile for homeowners, households, offices, and agencies.",
+      "type": "object",
+      "properties": {
+        "employerId": { "type": "string", "description": "Employer ID matching User UID" },
+        "userId": { "type": "string", "description": "FK to User document" },
+        "employerType": { "type": "string", "enum": ["individual_homeowner", "private_household", "corporate_office", "diplomatic_mission"] },
+        "houseSize": { "type": "string", "enum": ["apartment", "medium_house", "large_estate", "farm"] },
+        "familyMembersCount": { "type": "number" },
+        "hasChildren": { "type": "boolean" },
+        "hasElderly": { "type": "boolean" },
+        "city": { "type": "string" },
+        "suburb": { "type": "string" },
+        "totalJobsPosted": { "type": "number" },
+        "totalSpentUSD": { "type": "number" }
+      },
+      "required": ["employerId", "userId", "employerType", "city"]
+    },
+    "Job": {
+      "title": "Job Posting",
+      "description": "Work opportunities posted by employers and agencies.",
+      "type": "object",
+      "properties": {
+        "jobId": { "type": "string" },
+        "employerId": { "type": "string", "description": "FK to User/Employer" },
+        "employerName": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string", "enum": ["Housekeeper", "Nanny", "Cook", "Elderly Caregiver", "Gardener", "Driver", "Electrician", "Plumber", "Painter"] },
+        "jobType": { "type": "string", "enum": ["full_time_live_in", "full_time_live_out", "part_time", "one_time_task", "contract"] },
+        "description": { "type": "string" },
+        "city": { "type": "string" },
+        "suburb": { "type": "string" },
+        "salaryMinUSD": { "type": "number" },
+        "salaryMaxUSD": { "type": "number" },
+        "salaryType": { "type": "string", "enum": ["hourly", "daily", "monthly", "project_fixed"] },
+        "status": { "type": "string", "enum": ["open", "applications_closed", "interviewing", "filled", "cancelled", "expired"] },
+        "applicantsCount": { "type": "number" },
+        "selectedWorkerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["jobId", "employerId", "title", "category", "jobType", "status", "city"]
+    },
+    "Application": {
+      "title": "Job Application",
+      "description": "Worker application submitted for an open job.",
+      "type": "object",
+      "properties": {
+        "applicationId": { "type": "string" },
+        "jobId": { "type": "string", "description": "FK to Job" },
+        "workerId": { "type": "string", "description": "FK to Worker" },
+        "employerId": { "type": "string", "description": "FK to Employer" },
+        "workerName": { "type": "string" },
+        "pitchMessage": { "type": "string" },
+        "expectedSalaryUSD": { "type": "number" },
+        "status": { "type": "string", "enum": ["applied", "shortlisted", "interview_scheduled", "offered", "accepted", "rejected", "withdrawn"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["applicationId", "jobId", "workerId", "employerId", "status"]
+    },
+    "ChatThread": {
+      "title": "Chat Thread",
+      "description": "Conversation container between employer and worker or agency.",
+      "type": "object",
+      "properties": {
+        "chatId": { "type": "string" },
+        "jobId": { "type": "string", "description": "Optional associated job FK" },
+        "participants": { "type": "array", "description": "List of user UIDs in conversation" },
+        "lastMessageText": { "type": "string" },
+        "lastMessageTimestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["chatId", "participants"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "Individual message within a chat thread.",
+      "type": "object",
+      "properties": {
+        "messageId": { "type": "string" },
+        "chatId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "text": { "type": "string" },
+        "mediaUrl": { "type": "string" },
+        "mediaType": { "type": "string", "enum": ["text", "image", "audio_voice_note", "document"] },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["messageId", "chatId", "senderId", "receiverId", "text", "mediaType"]
+    },
+    "Payment": {
+      "title": "Payment & Escrow Transaction",
+      "description": "Financial transaction ledger for placement fees and wages in escrow.",
+      "type": "object",
+      "properties": {
+        "paymentId": { "type": "string" },
+        "bookingId": { "type": "string" },
+        "jobId": { "type": "string" },
+        "employerId": { "type": "string" },
+        "workerId": { "type": "string" },
+        "amountUSD": { "type": "number" },
+        "amountLocalZWG": { "type": "number" },
+        "currency": { "type": "string", "enum": ["USD", "ZWG"] },
+        "paymentGateway": { "type": "string", "enum": ["ecocash", "innbucks", "zimswitch_zipit", "stripe_card", "cash_voucher"] },
+        "gatewayTransactionRef": { "type": "string" },
+        "escrowStatus": { "type": "string", "enum": ["pending_deposit", "escrow_held", "released_to_worker", "refunded_to_employer", "disputed"] },
+        "platformFeeUSD": { "type": "number" },
+        "netWorkerPayoutUSD": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["paymentId", "employerId", "workerId", "amountUSD", "currency", "paymentGateway", "escrowStatus"]
+    },
+    "Review": {
+      "title": "Worker / Employer Review",
+      "description": "Verified rating and performance feedback.",
+      "type": "object",
+      "properties": {
+        "reviewId": { "type": "string" },
+        "workerId": { "type": "string" },
+        "employerId": { "type": "string" },
+        "employerName": { "type": "string" },
+        "jobId": { "type": "string" },
+        "rating": { "type": "number", "description": "1 to 5 stars" },
+        "punctualityRating": { "type": "number" },
+        "skillRating": { "type": "number" },
+        "trustRating": { "type": "number" },
+        "comment": { "type": "string" },
+        "workerResponse": { "type": "string" },
+        "status": { "type": "string", "enum": ["published", "under_review", "flagged", "removed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reviewId", "workerId", "employerId", "rating", "status"]
+    },
+    "Notification": {
+      "title": "Notification Alert",
+      "description": "User notification for system alerts, chats, and payment statuses.",
+      "type": "object",
+      "properties": {
+        "notificationId": { "type": "string" },
+        "recipientUserId": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "type": { "type": "string", "enum": ["job_alert", "application_update", "message_received", "payment_escrow_held", "payment_released", "police_verification_approved", "system_announcement"] },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["notificationId", "recipientUserId", "title", "body", "type", "isRead"]
+    },
+    "Report": {
+      "title": "Trust & Moderation Report",
+      "description": "Incident report or dispute ticket raised by platform users.",
+      "type": "object",
+      "properties": {
+        "reportId": { "type": "string" },
+        "reporterUserId": { "type": "string" },
+        "reportedUserId": { "type": "string" },
+        "reportedJobId": { "type": "string" },
+        "reportType": { "type": "string", "enum": ["fraud_attempt", "harassment", "unprofessional_behavior", "fake_documents", "no_show", "non_payment", "safety_hazard"] },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["open", "under_investigation", "resolved", "dismissed"] },
+        "assignedAdminId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reportId", "reporterUserId", "reportType", "description", "status"]
+    },
+    "Verification": {
+      "title": "Identity & Police Clearance Verification",
+      "description": "Document verification request processed manually or via Gemini OCR.",
+      "type": "object",
+      "properties": {
+        "verificationId": { "type": "string" },
+        "userId": { "type": "string" },
+        "documentType": { "type": "string", "enum": ["national_id", "zrp_police_clearance", "driver_license", "passport", "reference_letter"] },
+        "documentNumber": { "type": "string" },
+        "frontImageUrl": { "type": "string" },
+        "backImageUrl": { "type": "string" },
+        "verificationStatus": { "type": "string", "enum": ["pending", "ai_verified", "manual_review", "approved", "rejected"] },
+        "rejectionReason": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["verificationId", "userId", "documentType", "verificationStatus"]
+    },
+    "Subscription": {
+      "title": "Subscription Plan",
+      "description": "Monetization subscription for employers, agencies, and pro workers.",
+      "type": "object",
+      "properties": {
+        "subscriptionId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userType": { "type": "string", "enum": ["employer", "agency", "worker"] },
+        "planTier": { "type": "string", "enum": ["free", "pro_worker", "gold_employer", "enterprise_agency"] },
+        "priceUSD": { "type": "number" },
+        "billingCycle": { "type": "string", "enum": ["monthly", "quarterly", "annually"] },
+        "status": { "type": "string", "enum": ["active", "grace_period", "cancelled", "expired"] },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["subscriptionId", "userId", "planTier", "priceUSD", "status"]
+    },
+    "TrainingModule": {
+      "title": "Training Module / Course",
+      "description": "Educational course for domestic workers and artisans.",
+      "type": "object",
+      "properties": {
+        "courseId": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string", "enum": ["First Aid & Safety", "Infant Care", "Elderly Care", "Advanced Housekeeping", "Culinary Skills", "Professional Etiquette"] },
+        "description": { "type": "string" },
+        "durationHours": { "type": "number" },
+        "modulesCount": { "type": "number" },
+        "isCertificateIssued": { "type": "boolean" },
+        "priceUSD": { "type": "number" }
+      },
+      "required": ["courseId", "title", "category", "durationHours", "priceUSD"]
+    },
+    "BlogPost": {
+      "title": "Blog / Educational Article",
+      "description": "Informational guide on Zimbabwean labour law and housekeeping best practices.",
+      "type": "object",
+      "properties": {
+        "postId": { "type": "string" },
+        "title": { "type": "string" },
+        "slug": { "type": "string" },
+        "authorName": { "type": "string" },
+        "category": { "type": "string", "enum": ["Domestic Employment Laws", "Home Safety", "Worker Rights", "Hiring Advice", "Company News"] },
+        "excerpt": { "type": "string" },
+        "contentMarkdown": { "type": "string" },
+        "coverImageUrl": { "type": "string" },
+        "isPublished": { "type": "boolean" },
+        "publishedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["postId", "title", "slug", "category", "isPublished"]
+    },
+    "SystemSetting": {
+      "title": "System Configuration Setting",
+      "description": "Platform global parameters, exchange rates, and business rules.",
+      "type": "object",
+      "properties": {
+        "settingId": { "type": "string" },
+        "platformName": { "type": "string" },
+        "supportEmail": { "type": "string" },
+        "escrowFeePercentage": { "type": "number" },
+        "wgZwgExchangeRate": { "type": "number" },
+        "maintenanceMode": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["settingId", "platformName", "escrowFeePercentage", "wgZwgExchangeRate"]
+    },
+    "AdminLog": {
+      "title": "Admin Audit Log",
+      "description": "Immutable security and action audit log for system administrators.",
+      "type": "object",
+      "properties": {
+        "logId": { "type": "string" },
+        "adminUserId": { "type": "string" },
+        "adminEmail": { "type": "string" },
+        "actionCategory": { "type": "string", "enum": ["user_suspension", "verification_approval", "escrow_refund", "dispute_resolution", "system_config_change"] },
+        "targetDocumentPath": { "type": "string" },
+        "details": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["logId", "adminUserId", "actionCategory", "targetDocumentPath", "details"]
+    },
+    "Role": {
+      "title": "Role Definition",
+      "description": "RBAC role declaring permissions grouped for platform actors.",
+      "type": "object",
+      "properties": {
+        "roleId": { "type": "string" },
+        "roleName": { "type": "string" },
+        "description": { "type": "string" },
+        "permissionIds": { "type": "array" },
+        "isSystemRole": { "type": "boolean" }
+      },
+      "required": ["roleId", "roleName", "permissionIds"]
+    },
+    "Permission": {
+      "title": "Permission Grant",
+      "description": "Atomic system permission grant.",
+      "type": "object",
+      "properties": {
+        "permissionId": { "type": "string" },
+        "module": { "type": "string", "enum": ["users", "jobs", "payments", "verifications", "reports", "blog", "settings"] },
+        "action": { "type": "string", "enum": ["create", "read", "update", "delete", "approve", "override"] },
+        "description": { "type": "string" }
+      },
+      "required": ["permissionId", "module", "action", "description"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "Top-level user account documents."
+    },
+    "/users/{userId}/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "User specific notifications subcollection."
+    },
+    "/users/{userId}/subscriptions/{subscriptionId}": {
+      "schema": { "$ref": "#/entities/Subscription" },
+      "description": "User active and historic subscription records."
+    },
+    "/users/{userId}/verifications/{verificationId}": {
+      "schema": { "$ref": "#/entities/Verification" },
+      "description": "KYC document uploads submitted by user."
+    },
+    "/workers/{workerId}": {
+      "schema": { "$ref": "#/entities/Worker" },
+      "description": "Domestic worker and artisan profiles."
+    },
+    "/workers/{workerId}/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Subcollection of performance reviews received by a worker."
+    },
+    "/employers/{employerId}": {
+      "schema": { "$ref": "#/entities/Employer" },
+      "description": "Homeowner and business employer profiles."
+    },
+    "/jobs/{jobId}": {
+      "schema": { "$ref": "#/entities/Job" },
+      "description": "Open and completed job listings."
+    },
+    "/jobs/{jobId}/applications/{applicationId}": {
+      "schema": { "$ref": "#/entities/Application" },
+      "description": "Job applications subcollection."
+    },
+    "/applications/{applicationId}": {
+      "schema": { "$ref": "#/entities/Application" },
+      "description": "Top-level mirror collection for global application queries."
+    },
+    "/chats/{chatId}": {
+      "schema": { "$ref": "#/entities/ChatThread" },
+      "description": "Real-time communication channels."
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Individual messages subcollection inside a chat thread."
+    },
+    "/payments/{paymentId}": {
+      "schema": { "$ref": "#/entities/Payment" },
+      "description": "Escrow and wage transaction ledger."
+    },
+    "/reviews/{reviewId}": {
+      "schema": { "$ref": "#/entities/Review" },
+      "description": "Global review index for analytics and moderation."
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/Notification" },
+      "description": "Global notification queue for background workers."
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/Report" },
+      "description": "Safety and dispute reports."
+    },
+    "/verifications/{verificationId}": {
+      "schema": { "$ref": "#/entities/Verification" },
+      "description": "Global verification queue for admin review."
+    },
+    "/subscriptions/{subscriptionId}": {
+      "schema": { "$ref": "#/entities/Subscription" },
+      "description": "Global subscription collection."
+    },
+    "/trainingModules/{courseId}": {
+      "schema": { "$ref": "#/entities/TrainingModule" },
+      "description": "Educational course catalog."
+    },
+    "/blogPosts/{postId}": {
+      "schema": { "$ref": "#/entities/BlogPost" },
+      "description": "Public content blog articles."
+    },
+    "/systemSettings/{settingId}": {
+      "schema": { "$ref": "#/entities/SystemSetting" },
+      "description": "Platform global configuration documents."
+    },
+    "/adminLogs/{logId}": {
+      "schema": { "$ref": "#/entities/AdminLog" },
+      "description": "Admin action audit trail."
+    },
+    "/roles/{roleId}": {
+      "schema": { "$ref": "#/entities/Role" },
+      "description": "System role definitions for RBAC."
+    },
+    "/permissions/{permissionId}": {
+      "schema": { "$ref": "#/entities/Permission" },
+      "description": "Granular authorization grants for RBAC."
+    }
+  }
+}

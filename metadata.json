@@ -1,0 +1,6 @@
+{
+  "name": "Zimbabwe Maids Centre",
+  "description": "Comprehensive marketplace and management platform connecting domestic workers, artisans, homeowners, and agencies in Zimbabwe.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
