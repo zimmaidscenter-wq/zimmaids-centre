@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { PAYMENT_GATEWAY_ASSETS } from "./common/PaymentBadges";
+import { ZMC_OFFICIAL_LOGO } from "./common/BrandLogo";
 import {
   MessageCircle,
   PhoneCall,
@@ -37,14 +39,19 @@ export const WhatsAppHelpWidget: React.FC = () => {
 
             <div className="flex items-center space-x-3">
               <div className="relative">
-                <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center">
-                  <Headphones className="w-6 h-6 text-emerald-300" />
+                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-emerald-400 bg-white shadow-md shrink-0">
+                  <img
+                    src={ZMC_OFFICIAL_LOGO}
+                    alt="Zimbabwe Maids Centre"
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover"
+                  />
                 </div>
-                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-emerald-950 rounded-full"></span>
+                <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-400 border-2 border-emerald-950 rounded-full"></span>
               </div>
               <div>
                 <h4 className="font-extrabold text-sm text-white flex items-center gap-1.5">
-                  <span>ZMC Help Desk</span>
+                  <span>Zimbabwe Maids Centre</span>
                   <span className="px-1.5 py-0.2 bg-emerald-500 text-slate-950 font-black text-[9px] uppercase tracking-wider rounded">
                     24/7 Live
                   </span>
@@ -92,24 +99,48 @@ export const WhatsAppHelpWidget: React.FC = () => {
             </a>
 
             {/* Supported Payment Gateways Notice */}
-            <div className="bg-white border border-slate-200/80 rounded-2xl p-3 text-[11px] space-y-1.5">
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-3 text-[11px] space-y-2">
               <div className="flex items-center space-x-1.5 text-slate-700 font-bold">
                 <CreditCard className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Supported Escrow Payment Methods</span>
+                <span>Supported Escrow Gateways</span>
               </div>
-              <div className="flex flex-wrap gap-1 text-[10px]">
-                <span className="px-2 py-0.5 bg-emerald-50 text-emerald-800 font-semibold rounded border border-emerald-200/60">
-                  EcoCash
-                </span>
-                <span className="px-2 py-0.5 bg-teal-50 text-teal-800 font-semibold rounded border border-teal-200/60">
-                  InnBucks
-                </span>
-                <span className="px-2 py-0.5 bg-sky-50 text-sky-800 font-semibold rounded border border-sky-200/60">
-                  PayPal
-                </span>
-                <span className="px-2 py-0.5 bg-indigo-50 text-indigo-800 font-semibold rounded border border-indigo-200/60">
-                  Visa / Mastercard
-                </span>
+              <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+                <div className="flex items-center space-x-1.5 px-2 py-1 bg-slate-50 text-slate-800 font-bold rounded-lg border border-slate-200">
+                  <img
+                    src={PAYMENT_GATEWAY_ASSETS.ecocash}
+                    alt="EcoCash"
+                    referrerPolicy="no-referrer"
+                    className="w-4 h-4 rounded object-cover"
+                  />
+                  <span>EcoCash</span>
+                </div>
+                <div className="flex items-center space-x-1.5 px-2 py-1 bg-slate-50 text-slate-800 font-bold rounded-lg border border-slate-200">
+                  <img
+                    src={PAYMENT_GATEWAY_ASSETS.innbucks}
+                    alt="InnBucks"
+                    referrerPolicy="no-referrer"
+                    className="w-4 h-4 rounded object-cover"
+                  />
+                  <span>InnBucks</span>
+                </div>
+                <div className="flex items-center space-x-1.5 px-2 py-1 bg-slate-50 text-slate-800 font-bold rounded-lg border border-slate-200">
+                  <img
+                    src={PAYMENT_GATEWAY_ASSETS.zimswitch}
+                    alt="ZIPIT"
+                    referrerPolicy="no-referrer"
+                    className="w-4 h-4 rounded object-cover"
+                  />
+                  <span>ZimSwitch</span>
+                </div>
+                <div className="flex items-center space-x-1.5 px-2 py-1 bg-slate-50 text-slate-800 font-bold rounded-lg border border-slate-200">
+                  <img
+                    src={PAYMENT_GATEWAY_ASSETS.visa}
+                    alt="Visa / Mastercard"
+                    referrerPolicy="no-referrer"
+                    className="w-4 h-4 rounded object-cover"
+                  />
+                  <span>Visa / MC</span>
+                </div>
               </div>
             </div>
           </div>

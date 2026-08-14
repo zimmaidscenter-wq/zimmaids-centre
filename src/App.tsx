@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { AuthProvider } from "./context/AuthContext";
+import { AuthModal } from "./components/auth/AuthModal";
 import { Header } from "./components/Header";
 import { MobileBottomNav } from "./components/MobileBottomNav";
 import { Footer } from "./components/Footer";
@@ -13,7 +15,10 @@ import { JobManagementModule } from "./components/jobs/JobManagementModule";
 import { EnterpriseSearchEngine } from "./components/search/EnterpriseSearchEngine";
 import { WhatsAppMessagingSystem } from "./components/chat/WhatsAppMessagingSystem";
 import { WhatsAppIngestionPortal } from "./components/chat/WhatsAppIngestionPortal";
+import { AgencyDashboard } from "./components/agency/AgencyDashboard";
+import { AgencyRegistrationModal } from "./components/agency/AgencyRegistrationModal";
 import { PlacementFeeModal } from "./components/marketplace/PlacementFeeModal";
+import { ReferralProgramModal } from "./components/referral/ReferralProgramModal";
 import { PremiumAccessModal } from "./components/marketplace/PremiumAccessModal";
 import { ChatModal } from "./components/marketplace/ChatModal";
 import { WhatsAppHelpWidget } from "./components/WhatsAppHelpWidget";
@@ -23,7 +28,7 @@ import { UserRole, CityLocation, WorkerProfile, PlacementFeeRecord } from "./typ
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<
-    "landing" | "architecture" | "marketplace" | "worker" | "jobs" | "search" | "whatsapp" | "whatsapp-upload" | "ai-studio" | "payments" | "admin" | "reviews" | "reports"
+    "landing" | "architecture" | "marketplace" | "worker" | "agency" | "jobs" | "search" | "whatsapp" | "whatsapp-upload" | "ai-studio" | "payments" | "admin" | "reviews" | "reports"
   >("landing");
 
   const [selectedRole, setSelectedRole] = useState<UserRole>("Domestic worker");
@@ -33,6 +38,8 @@ export default function App() {
   // Premium Access & Placement States
   const [isPremiumEmployer, setIsPremiumEmployer] = useState<boolean>(false);
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState<boolean>(false);
+  const [isReferralModalOpen, setIsReferralModalOpen] = useState<boolean>(false);
+  const [isAgencyRegistrationModalOpen, setIsAgencyRegistrationModalOpen] = useState<boolean>(false);
   const [placementWorker, setPlacementWorker] = useState<WorkerProfile | null>(null);
   const [chatWorker, setChatWorker] = useState<WorkerProfile | null>(null);
   const [placementRecords, setPlacementRecords] = useState<PlacementFeeRecord[]>([]);
@@ -49,10 +56,111 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 font-sans selection:bg-emerald-500 selection:text-white flex flex-col justify-between">
-      <div>
-        {/* Navigation Bar */}
-        <Header
+    <AuthProvider>
+      <div className="min-h-screen bg-slate-100 text-slate-900 font-sans selection:bg-emerald-500 selection:text-white flex flex-col justify-between">
+        <div>
+          {/* Navigation Bar */}
+          <Header
+            activeTab={activeTab}
+            setActiveTab={setActiveTab}
+            selectedRole={selectedRole}
+            setSelectedRole={setSelectedRole}
+            selectedCity={selectedCity}
+            setSelectedCity={setSelectedCity}
+            currency={currency}
+            setCurrency={setCurrency}
+            onOpenAgencyRegister={() => setIsAgencyRegistrationModalOpen(true)}
+            onOpenReferralProgram={() => setIsReferralModalOpen(true)}
+          />
+
+          {/* View Switcher */}
+          <main className="pb-16">
+            {activeTab === "landing" && (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+                <LandingShowcase onNavigateToTab={(tab) => setActiveTab(tab as any)} />
+              </div>
+            )}
+            {activeTab === "architecture" && <ArchitectureView />}
+            {activeTab === "marketplace" && (
+              <WorkerDirectory
+                selectedRole={selectedRole}
+                selectedCity={selectedCity}
+                currency={currency}
+                isPremiumEmployer={isPremiumEmployer}
+                onOpenPremiumModal={() => setIsPremiumModalOpen(true)}
+                onOpenHirePlacement={(w) => setPlacementWorker(w)}
+                onOpenChat={(w) => setChatWorker(w)}
+              />
+            )}
+            {activeTab === "worker" && <WorkerModule currency={currency} />}
+            {activeTab === "agency" && (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+                <AgencyDashboard />
+              </div>
+            )}
+            {activeTab === "jobs" && <JobManagementModule currency={currency} />}
+            {activeTab === "search" && <EnterpriseSearchEngine currency={currency} />}
+            {activeTab === "whatsapp" && <WhatsAppMessagingSystem />}
+            {activeTab === "whatsapp-upload" && (
+              <WhatsAppIngestionPortal
+                onNavigateToMarketplace={() => setActiveTab("marketplace")}
+              />
+            )}
+            {activeTab === "ai-studio" && <AIVettingStudio />}
+            {activeTab === "payments" && (
+              <PaymentsLedger
+                currency={currency}
+                placementList={placementRecords}
+                isPremiumEmployer={isPremiumEmployer}
+                onActivatePremium={() => setIsPremiumModalOpen(true)}
+              />
+            )}
+            {activeTab === "reviews" && <ReviewAndTrustCenter />}
+            {activeTab === "reports" && (
+              <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+                <PerformanceReportsModule />
+              </div>
+            )}
+            {activeTab === "admin" && <AdminDashboard />}
+          </main>
+        </div>
+
+        {/* Global Modals & Floating Tools */}
+        <AuthModal />
+
+        <AgencyRegistrationModal
+          isOpen={isAgencyRegistrationModalOpen}
+          onClose={() => setIsAgencyRegistrationModalOpen(false)}
+          onSuccess={() => setActiveTab("agency")}
+        />
+
+        <PlacementFeeModal
+          worker={placementWorker}
+          onClose={() => setPlacementWorker(null)}
+          currency={currency}
+          onRecordPlacementSuccess={handleRecordPlacementSuccess}
+          onOpenReferralProgram={() => setIsReferralModalOpen(true)}
+        />
+
+        <ReferralProgramModal
+          isOpen={isReferralModalOpen}
+          onClose={() => setIsReferralModalOpen(false)}
+          currency={currency}
+        />
+
+        <PremiumAccessModal
+          isOpen={isPremiumModalOpen}
+          onClose={() => setIsPremiumModalOpen(false)}
+          currency={currency}
+          onActivateSuccess={handleActivatePremiumSuccess}
+        />
+
+        <ChatModal worker={chatWorker} onClose={() => setChatWorker(null)} />
+
+        <WhatsAppHelpWidget />
+
+        {/* Sticky Mobile & Tablet Bottom Navigation Bar */}
+        <MobileBottomNav
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           selectedRole={selectedRole}
@@ -63,86 +171,9 @@ export default function App() {
           setCurrency={setCurrency}
         />
 
-        {/* View Switcher */}
-        <main className="pb-16">
-          {activeTab === "landing" && (
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-              <LandingShowcase onNavigateToTab={(tab) => setActiveTab(tab as any)} />
-            </div>
-          )}
-          {activeTab === "architecture" && <ArchitectureView />}
-          {activeTab === "marketplace" && (
-            <WorkerDirectory
-              selectedRole={selectedRole}
-              selectedCity={selectedCity}
-              currency={currency}
-              isPremiumEmployer={isPremiumEmployer}
-              onOpenPremiumModal={() => setIsPremiumModalOpen(true)}
-              onOpenHirePlacement={(w) => setPlacementWorker(w)}
-              onOpenChat={(w) => setChatWorker(w)}
-            />
-          )}
-          {activeTab === "worker" && <WorkerModule currency={currency} />}
-          {activeTab === "jobs" && <JobManagementModule currency={currency} />}
-          {activeTab === "search" && <EnterpriseSearchEngine currency={currency} />}
-          {activeTab === "whatsapp" && <WhatsAppMessagingSystem />}
-          {activeTab === "whatsapp-upload" && (
-            <WhatsAppIngestionPortal
-              onNavigateToMarketplace={() => setActiveTab("marketplace")}
-            />
-          )}
-          {activeTab === "ai-studio" && <AIVettingStudio />}
-          {activeTab === "payments" && (
-            <PaymentsLedger
-              currency={currency}
-              placementList={placementRecords}
-              isPremiumEmployer={isPremiumEmployer}
-              onActivatePremium={() => setIsPremiumModalOpen(true)}
-            />
-          )}
-          {activeTab === "reviews" && <ReviewAndTrustCenter />}
-          {activeTab === "reports" && (
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-              <PerformanceReportsModule />
-            </div>
-          )}
-          {activeTab === "admin" && <AdminDashboard />}
-        </main>
+        {/* Footer */}
+        <Footer />
       </div>
-
-      {/* Global Modals & Floating Tools */}
-      <PlacementFeeModal
-        worker={placementWorker}
-        onClose={() => setPlacementWorker(null)}
-        currency={currency}
-        onRecordPlacementSuccess={handleRecordPlacementSuccess}
-      />
-
-      <PremiumAccessModal
-        isOpen={isPremiumModalOpen}
-        onClose={() => setIsPremiumModalOpen(false)}
-        currency={currency}
-        onActivateSuccess={handleActivatePremiumSuccess}
-      />
-
-      <ChatModal worker={chatWorker} onClose={() => setChatWorker(null)} />
-
-      <WhatsAppHelpWidget />
-
-      {/* Sticky Mobile & Tablet Bottom Navigation Bar */}
-      <MobileBottomNav
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        selectedRole={selectedRole}
-        setSelectedRole={setSelectedRole}
-        selectedCity={selectedCity}
-        setSelectedCity={setSelectedCity}
-        currency={currency}
-        setCurrency={setCurrency}
-      />
-
-      {/* Footer */}
-      <Footer />
-    </div>
+    </AuthProvider>
   );
 }

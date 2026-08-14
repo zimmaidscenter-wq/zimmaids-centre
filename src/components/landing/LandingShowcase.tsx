@@ -31,6 +31,7 @@ import appMockupImage from "../../assets/images/app_mobile_mockup_1786612200349.
 import verificationBadgeImage from "../../assets/images/verification_badge_1786612213061.jpg";
 import caregiverNannyImage from "../../assets/images/caregiver_nanny_1786612224041.jpg";
 import skilledArtisanImage from "../../assets/images/skilled_artisan_1786612235127.jpg";
+import { ZMC_OFFICIAL_LOGO } from "../common/BrandLogo";
 
 interface LandingShowcaseProps {
   onNavigateToTab?: (tab: string) => void;
@@ -245,8 +246,15 @@ export const LandingShowcase: React.FC<LandingShowcaseProps> = ({ onNavigateToTa
       <section className="relative bg-gradient-to-br from-slate-950 via-emerald-950 to-teal-950 text-white rounded-3xl overflow-hidden border border-emerald-800/60 shadow-2xl">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 p-6 sm:p-10 items-center relative z-10">
           <div className="lg:col-span-7 space-y-6">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-emerald-900/80 border border-emerald-700/60 rounded-full text-xs font-bold text-emerald-300">
-              <Sparkles className="w-4 h-4 text-amber-400" />
+            <div className="inline-flex items-center gap-2.5 px-4 py-2 bg-emerald-900/80 border border-emerald-500/60 rounded-full text-xs font-bold text-emerald-300 shadow-md">
+              <div className="w-6 h-6 rounded-full overflow-hidden border border-emerald-400 bg-white shrink-0">
+                <img
+                  src={ZMC_OFFICIAL_LOGO}
+                  alt="ZMC Logo"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                />
+              </div>
               <span>Zimbabwe's #1 Verified Domestic & Household Marketplace</span>
             </div>
 
@@ -599,8 +607,15 @@ export const LandingShowcase: React.FC<LandingShowcaseProps> = ({ onNavigateToTa
       <footer className="bg-slate-950 text-white rounded-3xl p-8 sm:p-12 border border-slate-800 space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-8 border-b border-slate-800 text-xs">
           <div className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <ShieldCheck className="w-6 h-6 text-emerald-400" />
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-full overflow-hidden border border-emerald-400 bg-white shrink-0 shadow-md">
+                <img
+                  src={ZMC_OFFICIAL_LOGO}
+                  alt="Zimbabwe Maids Centre Logo"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                />
+              </div>
               <span className="font-bold text-sm text-white">Zimbabwe Maids Centre</span>
             </div>
             <p className="text-slate-400 leading-relaxed">

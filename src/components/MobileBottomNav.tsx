@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useAuth } from "../context/AuthContext";
 import {
   Sparkles,
   Building2,
@@ -16,6 +17,8 @@ import {
   MapPin,
   Users,
   PhoneCall,
+  LogIn,
+  LogOut,
 } from "lucide-react";
 import { UserRole, CityLocation } from "../types/marketplace";
 import { ALL_ZIMBABWE_CITIES } from "../data/zimbabweLocations";

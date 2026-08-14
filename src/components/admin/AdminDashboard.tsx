@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from "react";
+import { useAuth } from "../../context/AuthContext";
 import { EnterpriseSecurityCenter } from "./EnterpriseSecurityCenter";
 import { TestingStrategyCenter } from "./TestingStrategyCenter";
 import { PerformanceReportsModule } from "./PerformanceReportsModule";
+import { AgencyManagementCenter } from "./AgencyManagementCenter";
+import { WhatsAppProfileImportModal } from "../chat/WhatsAppProfileImportModal";
+import { convertRegistrationToWorkerProfile } from "../../utils/whatsappTemplates";
+import { ZMC_OFFICIAL_LOGO } from "../common/BrandLogo";
 import {
   ShieldCheck,
   CheckCircle2,
@@ -11,6 +16,7 @@ import {
   TrendingUp,
   Users,
   Building,
+  Building2,
   Check,
   X,
   Search,
@@ -39,7 +45,8 @@ import {
   ChevronRight,
   ArrowUpRight,
   SlidersHorizontal,
-  HelpCircle
+  HelpCircle,
+  MessageSquare
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -94,7 +101,20 @@ const PAYMENT_GATEWAY_SHARE = [
 ];
 
 export const AdminDashboard: React.FC = () => {
+  const {
+    pendingWorkerProfiles,
+    approveWorkerProfile,
+    rejectWorkerProfile,
+    pendingJobPostings,
+    approveJobPosting,
+    rejectJobPosting,
+    agencies,
+  } = useAuth();
+
   const [activeTab, setActiveTab] = useState<
+    | "profile-approvals"
+    | "job-approvals"
+    | "agencies"
     | "analytics"
     | "revenue"
     | "users"
@@ -110,12 +130,16 @@ export const AdminDashboard: React.FC = () => {
     | "security"
     | "qa-testing"
     | "performance-reports"
-  >("performance-reports");
+  >("profile-approvals");
 
   // Filters
   const [timeRange, setTimeRange] = useState("This Month");
   const [cityFilter, setCityFilter] = useState("All Cities");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // WhatsApp Profile Import & Audit Modal State
+  const [showWhatsAppImportModal, setShowWhatsAppImportModal] = useState(false);
+  const [selectedWorkerAudit, setSelectedWorkerAudit] = useState<any>(null);
 
   // AI Insights State
   const [isLoadingAi, setIsLoadingAi] = useState(false);
@@ -306,24 +330,34 @@ export const AdminDashboard: React.FC = () => {
       {/* Top Administrative Header Banner */}
       <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 border border-emerald-800/60 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden print:hidden">
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 relative z-10">
-          <div className="space-y-3 max-w-3xl">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="px-3 py-1 bg-emerald-800/90 rounded-full text-xs font-bold text-emerald-200 border border-emerald-700/60 flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
-                <span>Zimbabwe Maids Centre Executive Admin Console</span>
-              </span>
-              <span className="px-2.5 py-1 bg-slate-800/80 rounded-full text-[11px] text-emerald-400 font-mono flex items-center gap-1">
-                <Activity className="w-3 h-3 text-emerald-400 animate-pulse" />
-                <span>Live Gateway Sync: 100% Online</span>
-              </span>
+          <div className="flex items-start gap-4 max-w-3xl">
+            <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-emerald-400 bg-white shadow-lg shrink-0 hidden sm:block">
+              <img
+                src={ZMC_OFFICIAL_LOGO}
+                alt="Zimbabwe Maids Centre"
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover"
+              />
             </div>
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-3 py-1 bg-emerald-800/90 rounded-full text-xs font-bold text-emerald-200 border border-emerald-700/60 flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
+                  <span>Zimbabwe Maids Centre Executive Admin Console</span>
+                </span>
+                <span className="px-2.5 py-1 bg-slate-800/80 rounded-full text-[11px] text-emerald-400 font-mono flex items-center gap-1">
+                  <Activity className="w-3 h-3 text-emerald-400 animate-pulse" />
+                  <span>Live Gateway Sync: 100% Online</span>
+                </span>
+              </div>
 
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              National Operations & AI Analytics Center
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300">
-              Real-time monitoring across Harare, Bulawayo, Mutare, Gweru & Chinhoyi. ZRP background checks, EcoCash USD escrow volume, complaint resolution & AI forecasting.
-            </p>
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+                National Operations & AI Analytics Center
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-300">
+                Real-time monitoring across Harare, Bulawayo, Mutare, Gweru & Chinhoyi. ZRP background checks, EcoCash USD escrow volume, complaint resolution & AI forecasting.
+              </p>
+            </div>
           </div>
 
           {/* Quick Action Bar & Export Controls */}
@@ -391,8 +425,17 @@ export const AdminDashboard: React.FC = () => {
       {/* Main Admin Navigation Tabs */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2 print:hidden">
         {[
+          { id: "profile-approvals", label: `Profile Approvals (${pendingWorkerProfiles.length})`, icon: UserCheck, badge: pendingWorkerProfiles.length, highlight: true },
+          { id: "job-approvals", label: `Job Approvals (${pendingJobPostings.length})`, icon: Briefcase, badge: pendingJobPostings.length, highlight: true },
+          {
+            id: "agencies",
+            label: `Agencies & Subscriptions (${agencies.length})`,
+            icon: Building2,
+            badge: agencies.filter((a) => a.approvalStatus === "Pending Approval" || (a.subscription.pendingPaymentRecord && a.subscription.pendingPaymentRecord.status === "Pending Review")).length,
+            highlight: true,
+          },
           { id: "analytics", label: "Analytics & KPI Overview", icon: BarChart3 },
-          { id: "performance-reports", label: "Performance Reports (D3/Recharts)", icon: TrendingUp, highlight: true },
+          { id: "performance-reports", label: "Performance Reports (D3/Recharts)", icon: TrendingUp },
           { id: "revenue", label: "Revenue & Escrow", icon: DollarSign },
           { id: "users", label: "Users Directory", icon: Users },
           { id: "jobs", label: "Jobs", icon: Briefcase },
@@ -400,9 +443,9 @@ export const AdminDashboard: React.FC = () => {
           { id: "verification", label: `Verification Queue (${pendingVerifications.length})`, icon: ShieldCheck, badge: pendingVerifications.length },
           { id: "payments", label: "Payments Ledger", icon: FileText },
           { id: "complaints", label: `Complaints (${complaintsList.length})`, icon: AlertCircle },
-          { id: "ai-insights", label: "AI Insights", icon: Sparkles, highlight: true },
-          { id: "security", label: "Security & Governance Suite", icon: ShieldAlert, highlight: true },
-          { id: "qa-testing", label: "QA & Testing Strategy", icon: CheckSquare, highlight: true },
+          { id: "ai-insights", label: "AI Insights", icon: Sparkles },
+          { id: "security", label: "Security & Governance Suite", icon: ShieldAlert },
+          { id: "qa-testing", label: "QA & Testing Strategy", icon: CheckSquare },
           { id: "logs", label: "Audit Logs", icon: Lock },
           { id: "notifications", label: "Notifications", icon: Bell },
         ].map((tab) => {
@@ -431,6 +474,244 @@ export const AdminDashboard: React.FC = () => {
           );
         })}
       </div>
+
+      {/* SECTION 0A: CANDIDATE PROFILE APPROVALS */}
+      {activeTab === "profile-approvals" && (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-emerald-900 to-slate-900 p-6 rounded-3xl text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="px-3 py-1 bg-amber-400 text-slate-950 text-xs font-black rounded-full uppercase tracking-wider">
+                  Admin Approval Required
+                </span>
+                <span className="text-xs text-emerald-200">
+                  {pendingWorkerProfiles.length} Pending Review
+                </span>
+              </div>
+              <h2 className="text-2xl font-black text-white mt-2">
+                Candidate Worker Profile Approvals
+              </h2>
+              <p className="text-xs text-emerald-100 max-w-2xl mt-1">
+                Every domestic worker profile must be vetted for ZRP CID Police Clearance and ID authenticity before appearing on the public Client Marketplace.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowWhatsAppImportModal(true)}
+                className="px-4 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-2xl shadow-lg transition-all flex items-center gap-2"
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>Import via WhatsApp</span>
+              </button>
+              <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center min-w-[120px]">
+                <span className="text-2xl font-black text-amber-300 block font-mono">
+                  {pendingWorkerProfiles.length}
+                </span>
+                <span className="text-[11px] text-emerald-100 font-bold uppercase">
+                  Pending Profiles
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {pendingWorkerProfiles.length === 0 ? (
+            <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center space-y-3 shadow-xs">
+              <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
+              <h3 className="text-lg font-bold text-slate-900">All Candidate Profiles Approved!</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                There are no pending domestic worker or artisan profiles requiring admin approval at this moment.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {pendingWorkerProfiles.map((worker) => (
+                <div
+                  key={worker.id}
+                  className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm hover:border-emerald-300 transition-all space-y-4 relative"
+                >
+                  <div className="flex items-start gap-3">
+                    <img
+                      src={worker.photoUrl}
+                      alt={worker.fullName}
+                      className="w-16 h-16 rounded-2xl object-cover border-2 border-emerald-500 shadow-sm shrink-0"
+                    />
+                    <div className="space-y-1 flex-grow">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-extrabold text-slate-900 text-sm">{worker.fullName}</h3>
+                        <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 font-bold text-[10px] rounded-full">
+                          Pending Vetting
+                        </span>
+                      </div>
+                      <p className="text-xs font-bold text-emerald-800">{worker.role}</p>
+                      <p className="text-[11px] text-slate-500 font-medium">
+                        📍 {worker.city} ({worker.suburb}) • {worker.experienceYears} Years Exp.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Rate & Vetting Details */}
+                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/60 grid grid-cols-2 gap-2 text-[11px]">
+                    <div>
+                      <span className="text-slate-400 font-medium block">Monthly Rate</span>
+                      <strong className="text-slate-900 font-bold font-mono text-xs">
+                        ${worker.monthlyRateUSD} USD / mo
+                      </strong>
+                    </div>
+                    <div>
+                      <span className="text-slate-400 font-medium block">Police Clearance</span>
+                      <strong className="text-emerald-700 font-bold text-[10px] truncate block">
+                        {worker.policeClearanceNo || "Ref # ZRP-2026-Pending"}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <p className="text-xs text-slate-600 line-clamp-2 italic bg-slate-50/50 p-2.5 rounded-xl border border-slate-100">
+                    "{worker.bio}"
+                  </p>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    <button
+                      onClick={() => setSelectedWorkerAudit(worker)}
+                      className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-xl flex items-center gap-1"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Audit 6-Step Details</span>
+                    </button>
+
+                    <button
+                      onClick={() => approveWorkerProfile(worker.id)}
+                      className="flex-1 py-2 bg-emerald-900 hover:bg-emerald-950 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center space-x-1.5"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <span>Approve Profile</span>
+                    </button>
+
+                    <button
+                      onClick={() => rejectWorkerProfile(worker.id)}
+                      className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition-all flex items-center justify-center space-x-1"
+                    >
+                      <XCircle className="w-4 h-4 text-rose-600" />
+                      <span>Decline</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SECTION 0B: EMPLOYER JOB APPROVALS */}
+      {activeTab === "job-approvals" && (
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-slate-900 to-emerald-950 p-6 rounded-3xl text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="px-3 py-1 bg-emerald-400 text-slate-950 text-xs font-black rounded-full uppercase tracking-wider">
+                  Employer Postings
+                </span>
+                <span className="text-xs text-emerald-200">
+                  {pendingJobPostings.length} Pending Approval
+                </span>
+              </div>
+              <h2 className="text-2xl font-black text-white mt-2">
+                Employer Job Posting Vetting
+              </h2>
+              <p className="text-xs text-emerald-100 max-w-2xl mt-1">
+                Admin review ensures wage fairness ($USD), clear job requirements, and prevents predatory listings before opening applications to workers.
+              </p>
+            </div>
+            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10 text-center min-w-[160px]">
+              <span className="text-2xl font-black text-emerald-300 block font-mono">
+                {pendingJobPostings.length}
+              </span>
+              <span className="text-[11px] text-emerald-100 font-bold uppercase">
+                Pending Vacancies
+              </span>
+            </div>
+          </div>
+
+          {pendingJobPostings.length === 0 ? (
+            <div className="bg-white border border-slate-200 rounded-3xl p-12 text-center space-y-3 shadow-xs">
+              <CheckCircle2 className="w-12 h-12 text-emerald-600 mx-auto" />
+              <h3 className="text-lg font-bold text-slate-900">All Job Vacancies Vetted!</h3>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                No job postings are currently waiting for admin approval.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {pendingJobPostings.map((job) => (
+                <div
+                  key={job.id}
+                  className="bg-white border border-slate-200 rounded-3xl p-5 shadow-sm hover:border-emerald-300 transition-all space-y-4"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="font-black text-slate-900 text-sm leading-snug">{job.title}</h3>
+                      <span className="px-2.5 py-0.5 bg-amber-100 text-amber-900 font-extrabold text-[10px] rounded-full shrink-0">
+                        Pending Approval
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Posted by <strong>{job.employerName}</strong> • 📍 {job.city} ({job.suburb})
+                    </p>
+                  </div>
+
+                  <div className="bg-emerald-50/60 p-3 rounded-2xl border border-emerald-200/60 flex items-center justify-between text-xs">
+                    <div>
+                      <span className="text-emerald-900 font-bold block text-[10px] uppercase">Offered Compensation</span>
+                      <strong className="text-emerald-950 font-black font-mono text-sm">
+                        ${job.offeredSalaryUSD} USD / {job.payFrequency}
+                      </strong>
+                    </div>
+                    <span className="px-2.5 py-1 bg-white border border-emerald-300 text-emerald-800 font-bold text-[10px] rounded-xl">
+                      {job.workType}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {job.description}
+                  </p>
+
+                  <div className="flex flex-wrap gap-1">
+                    {job.requiredSkills?.map((skill: string) => (
+                      <span key={skill} className="px-2 py-0.5 bg-slate-100 text-slate-700 text-[10px] font-bold rounded-lg">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      onClick={() => approveJobPosting(job.id)}
+                      className="flex-1 py-2.5 bg-emerald-900 hover:bg-emerald-950 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center space-x-1.5"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                      <span>Approve Job Vacancy</span>
+                    </button>
+
+                    <button
+                      onClick={() => rejectJobPosting(job.id)}
+                      className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl transition-all flex items-center justify-center space-x-1"
+                    >
+                      <XCircle className="w-4 h-4 text-rose-600" />
+                      <span>Decline</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SECTION 0C: MULTI-AGENCY GOVERNANCE & SUBSCRIPTION SYSTEM */}
+      {activeTab === "agencies" && (
+        <AgencyManagementCenter />
+      )}
 
       {/* SECTION 1: ANALYTICS & KPIS */}
       {activeTab === "analytics" && (
@@ -1218,6 +1499,83 @@ export const AdminDashboard: React.FC = () => {
               >
                 <Check className="w-4 h-4" />
                 <span>Approve National Clearance</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WHATSAPP PROFILE IMPORT MODAL (ADMIN) */}
+      {showWhatsAppImportModal && (
+        <WhatsAppProfileImportModal
+          isOpen={showWhatsAppImportModal}
+          onClose={() => setShowWhatsAppImportModal(false)}
+          onImportComplete={(importedWorker) => {
+            const mapped = convertRegistrationToWorkerProfile(importedWorker);
+            approveWorkerProfile(mapped.id);
+            setShowWhatsAppImportModal(false);
+          }}
+        />
+      )}
+
+      {/* DETAILED 6-STEP CANDIDATE AUDIT MODAL */}
+      {selectedWorkerAudit && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl space-y-4 border border-slate-200 animate-in zoom-in-95 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center space-x-3">
+                <img
+                  src={selectedWorkerAudit.photoUrl}
+                  alt={selectedWorkerAudit.fullName}
+                  className="w-12 h-12 rounded-xl object-cover border border-emerald-500"
+                />
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-sm">{selectedWorkerAudit.fullName}</h3>
+                  <p className="text-xs text-emerald-800 font-bold">{selectedWorkerAudit.role} • {selectedWorkerAudit.city}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setSelectedWorkerAudit(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <strong className="text-slate-900 block mb-1">National ID & Contact Details:</strong>
+                <p>Phone: <strong>{selectedWorkerAudit.phoneNumber || "+263 78 545 8828"}</strong></p>
+                <p>Police Ref: <strong>{selectedWorkerAudit.policeClearanceNo || "ZRP-CID-CLEARED"}</strong></p>
+                <p>Rate: <strong>${selectedWorkerAudit.monthlyRateUSD} USD / month</strong></p>
+              </div>
+
+              <div className="p-3 bg-emerald-50/60 rounded-xl border border-emerald-200">
+                <strong className="text-emerald-950 block mb-1">Standardized Vetting & References:</strong>
+                <p className="text-emerald-900 leading-relaxed">
+                  ✓ Verified against Zimbabwe Cyber and Data Protection Act standards.<br />
+                  ✓ Validated employer references & contact authenticity.<br />
+                  ✓ Clean criminal background history certified.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setSelectedWorkerAudit(null)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs"
+              >
+                Close Audit
+              </button>
+              <button
+                onClick={() => {
+                  approveWorkerProfile(selectedWorkerAudit.id);
+                  setSelectedWorkerAudit(null);
+                }}
+                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs flex items-center gap-1"
+              >
+                <Check className="w-4 h-4" />
+                <span>Confirm & Approve Profile</span>
               </button>
             </div>
           </div>

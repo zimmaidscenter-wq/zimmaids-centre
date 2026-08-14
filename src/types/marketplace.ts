@@ -12,8 +12,16 @@ export type UserRole =
   | "Builder"
   | "Carpenter"
   | "Cleaner"
+  | "General cleaner"
   | "Chef"
   | "Nurse aide"
+  | "Doctor"
+  | "Shop assistant"
+  | "General hand"
+  | "Caretaker"
+  | "Mobile carwasher"
+  | "Appliance repairer"
+  | "Locksmith"
   | "Tree cutter"
   | "Farm worker"
   | "Cook"
@@ -73,6 +81,33 @@ export interface VerificationBadge {
   tradeTradeLicense?: boolean;
 }
 
+export interface PortfolioItem {
+  id: string;
+  title: string;
+  category:
+    | "Work Photo"
+    | "Reference Letter"
+    | "Certificate"
+    | "National ID"
+    | "Police Clearance"
+    | "Medical Report"
+    | "Cooking / Meal Sample"
+    | "Cleaning / Ironing Proof"
+    | "Childcare / Nursery Setup"
+    | "Other Document";
+  fileType: "image" | "pdf";
+  url: string;
+  thumbnailUrl?: string;
+  description?: string;
+  uploadedAt: string;
+  fileSize?: string;
+  isVerified?: boolean;
+  issuerOrEmployer?: string;
+  rating?: number;
+  documentContent?: string;
+  verifiedBy?: string;
+}
+
 export interface WorkerProfile {
   id: string;
   fullName: string;
@@ -101,8 +136,31 @@ export interface WorkerProfile {
   availability: "Full-Time" | "Part-Time" | "Live-In" | "Contract" | "Emergency On-Call"; // Availability
   policeClearanceDate: string;
   aiTrustScore: number;
+  agencyId?: string;
   agencyName?: string;
+  isAgencyManaged?: boolean;
+  isAgencyVerified?: boolean;
+  status?: "Active" | "Archived" | "Draft" | "Pending Review";
   audioBioUrl?: string;
+  // Candidate Appearance 3-Photo Set (Profile, Full Length, Work Action)
+  candidatePhotos?: {
+    primaryProfilePhoto: string;
+    fullLengthPhoto?: string;
+    workActionPhoto?: string;
+  };
+  // Portfolio & Document attachments
+  portfolio?: PortfolioItem[];
+  // Documents & CV uploads
+  cvUrl?: string;
+  policeClearanceDocUrl?: string;
+  medicalCertDocUrl?: string;
+  referenceLettersCount?: number;
+  documents?: {
+    type: "CV" | "Police Clearance" | "Medical Certificate" | "Reference Letter" | "Trade Certificate" | "National ID";
+    name: string;
+    url: string;
+    uploadedAt: string;
+  }[];
   // Contact & Protection Fields
   phoneNumber?: string;
   whatsappNumber?: string;
@@ -112,11 +170,54 @@ export interface WorkerProfile {
   restrictionReason?: string;
 }
 
+export type HelperType = "Live-In" | "Live-Out/Day Worker";
+export type PrimaryFocusRole =
+  | "Housekeeping"
+  | "Nanny"
+  | "Elderly Care"
+  | "Chef"
+  | "Gardener"
+  | "Maid";
+
+export interface EmployerHiringRequest {
+  id: string;
+  fullName: string;
+  phoneOrWhatsApp: string;
+  email?: string;
+  physicalAddress: {
+    streetAddress?: string;
+    suburb: string;
+    city: CityLocation | string;
+  };
+  helperType: HelperType;
+  primaryFocus: PrimaryFocusRole;
+  preferredAges: string;
+  householdDetails: {
+    numberOfKids: number;
+    numberOfAdults: number;
+    numberOfBedrooms: number;
+    pets: string;
+    kidsAgesNotes?: string;
+  };
+  specialNeeds: string;
+  proposedOffDays: string;
+  staffAccommodation: string;
+  offeredSalaryUSD?: number;
+  startDate?: string;
+  urgent?: boolean;
+  additionalNotes?: string;
+  status: "Pending Match" | "In Review" | "Interviewing" | "Placed" | "Closed";
+  createdAt: string;
+}
+
 export interface JobPosting {
   id: string;
   title: string;
   roleNeeded: UserRole;
   employerName: string;
+  agencyId?: string;
+  agencyName?: string;
+  isAgencyVerified?: boolean;
   city: CityLocation;
   suburb: string;
   offeredSalaryUSD: number;
@@ -126,10 +227,30 @@ export interface JobPosting {
   requiredSkills: string[];
   postedDate: string;
   applicantCount: number;
-  status: "Open" | "In Review" | "Placed" | "Filled" | "Draft" | "Expired";
+  status: "Open" | "In Review" | "Placed" | "Filled" | "Draft" | "Expired" | "Closed";
   urgent: boolean;
   isFeatured?: boolean;
   expiryDate?: string;
+  // Enhanced Employer Hiring Details
+  helperType?: HelperType;
+  primaryFocus?: PrimaryFocusRole;
+  preferredAges?: string;
+  householdDetails?: {
+    numberOfKids: number;
+    numberOfAdults: number;
+    numberOfBedrooms: number;
+    pets: string;
+    kidsAgesNotes?: string;
+  };
+  specialNeeds?: string;
+  proposedOffDays?: string;
+  staffAccommodation?: string;
+  physicalAddress?: {
+    streetAddress?: string;
+    suburb: string;
+    city: string;
+  };
+  phoneOrWhatsApp?: string;
 }
 
 export interface PlacementFeeRecord {
@@ -157,6 +278,27 @@ export interface PremiumSubscription {
   durationDays: number;
   activatedAt?: string;
   expiresAt?: string;
+}
+
+export interface ReferralReward {
+  id: string;
+  referredName: string;
+  referredEmailOrPhone: string;
+  dateReferred: string;
+  status: "Pending Registration" | "Registered" | "Placement Completed";
+  discountEarnedUSD: number;
+  discountVoucherCode: string;
+  isRedeemed: boolean;
+}
+
+export interface UserReferralProfile {
+  referralCode: string;
+  referralLink: string;
+  totalInvitesSent: number;
+  successfulPlacements: number;
+  totalDiscountsEarnedUSD: number;
+  availableDiscountBalanceUSD: number;
+  referrals: ReferralReward[];
 }
 
 export interface MessageItem {

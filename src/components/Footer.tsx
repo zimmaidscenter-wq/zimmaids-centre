@@ -1,4 +1,6 @@
 import React from "react";
+import { PAYMENT_GATEWAY_ASSETS } from "./common/PaymentBadges";
+import { ZMC_OFFICIAL_LOGO } from "./common/BrandLogo";
 import {
   ShieldCheck,
   PhoneCall,
@@ -24,16 +26,24 @@ export const Footer: React.FC = () => {
         {/* Top Row: Brand & Helpline & Contact Protection Notice */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start border-b border-slate-800 pb-8">
           {/* Col 1: Brand Info */}
-          <div className="space-y-2">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center p-0.5 shadow-md">
-                <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                  <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                </div>
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-emerald-400/80 bg-white shadow-md shadow-emerald-950/40 shrink-0">
+                <img
+                  src={ZMC_OFFICIAL_LOGO}
+                  alt="Zimbabwe Maids Centre Official Logo"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <span className="text-base font-extrabold text-white tracking-tight">
-                Zimbabwe Maids Centre
-              </span>
+              <div>
+                <span className="text-base font-extrabold text-white tracking-tight block">
+                  Zimbabwe Maids Centre
+                </span>
+                <span className="text-[10px] text-emerald-300 font-bold uppercase tracking-wider block">
+                  Your #1 Online Placement Agency
+                </span>
+              </div>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed">
               Zimbabwe's largest verified marketplace for domestic workers, housekeepers, nannies, nurse aides, and home artisans. Connecting verified professionals with homeowners and employers nationwide.
@@ -97,57 +107,87 @@ export const Footer: React.FC = () => {
           {/* Badges Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             {/* 1. EcoCash Badge */}
-            <div className="bg-gradient-to-br from-emerald-950 to-emerald-900 border border-emerald-500/60 rounded-xl p-3 text-center shadow-md hover:border-emerald-400 transition-all">
-              <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-1.5">
-                <Smartphone className="w-4 h-4" />
+            <div className="bg-gradient-to-br from-blue-950 to-slate-900 border border-blue-500/60 rounded-xl p-3 text-center shadow-md hover:border-blue-400 transition-all group">
+              <div className="w-12 h-12 rounded-xl overflow-hidden mx-auto mb-2 border border-blue-400/40 shadow-inner bg-slate-950 p-0.5 group-hover:scale-105 transition-transform">
+                <img
+                  src={PAYMENT_GATEWAY_ASSETS.ecocash}
+                  alt="EcoCash"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover rounded-lg"
+                />
               </div>
               <div className="font-extrabold text-white text-xs">EcoCash</div>
-              <div className="text-[9px] text-emerald-300 font-medium mt-0.5">USD & ZWG Mobile</div>
+              <div className="text-[9px] text-blue-300 font-medium mt-0.5">USD & ZWG Mobile</div>
             </div>
 
             {/* 2. InnBucks Badge */}
-            <div className="bg-gradient-to-br from-amber-950 to-yellow-900/40 border border-amber-500/60 rounded-xl p-3 text-center shadow-md hover:border-amber-400 transition-all">
-              <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center mx-auto mb-1.5">
-                <Smartphone className="w-4 h-4" />
+            <div className="bg-gradient-to-br from-amber-950 to-slate-900 border border-amber-500/60 rounded-xl p-3 text-center shadow-md hover:border-amber-400 transition-all group">
+              <div className="w-12 h-12 rounded-xl overflow-hidden mx-auto mb-2 border border-amber-400/40 shadow-inner bg-slate-950 p-0.5 group-hover:scale-105 transition-transform">
+                <img
+                  src={PAYMENT_GATEWAY_ASSETS.innbucks}
+                  alt="InnBucks"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover rounded-lg"
+                />
               </div>
               <div className="font-extrabold text-white text-xs">InnBucks</div>
               <div className="text-[9px] text-amber-300 font-medium mt-0.5">Simbisa Mobile Wallet</div>
             </div>
 
             {/* 3. ZimSwitch / ZIPIT Badge */}
-            <div className="bg-gradient-to-br from-sky-950 to-blue-900/40 border border-sky-500/60 rounded-xl p-3 text-center shadow-md hover:border-sky-400 transition-all">
-              <div className="w-8 h-8 rounded-full bg-sky-500/20 text-sky-400 flex items-center justify-center mx-auto mb-1.5">
-                <Building2 className="w-4 h-4" />
+            <div className="bg-gradient-to-br from-sky-950 to-slate-900 border border-sky-500/60 rounded-xl p-3 text-center shadow-md hover:border-sky-400 transition-all group">
+              <div className="w-12 h-12 rounded-xl overflow-hidden mx-auto mb-2 border border-sky-400/40 shadow-inner bg-slate-950 p-0.5 group-hover:scale-105 transition-transform">
+                <img
+                  src={PAYMENT_GATEWAY_ASSETS.zimswitch}
+                  alt="ZimSwitch"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover rounded-lg"
+                />
               </div>
               <div className="font-extrabold text-white text-xs">ZimSwitch</div>
               <div className="text-[9px] text-sky-300 font-medium mt-0.5">ZIPIT & Local Banks</div>
             </div>
 
             {/* 4. Visa & Mastercard Badge */}
-            <div className="bg-gradient-to-br from-indigo-950 to-purple-900/40 border border-indigo-500/60 rounded-xl p-3 text-center shadow-md hover:border-indigo-400 transition-all">
-              <div className="w-8 h-8 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto mb-1.5">
-                <CreditCard className="w-4 h-4" />
+            <div className="bg-gradient-to-br from-indigo-950 to-slate-900 border border-indigo-500/60 rounded-xl p-3 text-center shadow-md hover:border-indigo-400 transition-all group">
+              <div className="w-12 h-12 rounded-xl overflow-hidden mx-auto mb-2 border border-indigo-400/40 shadow-inner bg-slate-950 p-0.5 group-hover:scale-105 transition-transform">
+                <img
+                  src={PAYMENT_GATEWAY_ASSETS.visa}
+                  alt="Visa & Mastercard"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover rounded-lg"
+                />
               </div>
               <div className="font-extrabold text-white text-xs">Visa / Mastercard</div>
               <div className="text-[9px] text-indigo-300 font-medium mt-0.5">International Cards</div>
             </div>
 
             {/* 5. Mukuru Remittance Badge */}
-            <div className="bg-gradient-to-br from-orange-950 to-amber-950/40 border border-orange-500/60 rounded-xl p-3 text-center shadow-md hover:border-orange-400 transition-all">
-              <div className="w-8 h-8 rounded-full bg-orange-500/20 text-orange-400 flex items-center justify-center mx-auto mb-1.5">
-                <Globe className="w-4 h-4" />
+            <div className="bg-gradient-to-br from-orange-950 to-slate-900 border border-orange-500/60 rounded-xl p-3 text-center shadow-md hover:border-orange-400 transition-all group">
+              <div className="w-12 h-12 rounded-xl overflow-hidden mx-auto mb-2 border border-orange-400/40 shadow-inner bg-slate-950 p-0.5 group-hover:scale-105 transition-transform">
+                <img
+                  src={PAYMENT_GATEWAY_ASSETS.mukuru}
+                  alt="Mukuru"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover rounded-lg"
+                />
               </div>
               <div className="font-extrabold text-white text-xs">Mukuru</div>
               <div className="text-[9px] text-orange-300 font-medium mt-0.5">Cross-Border Remit</div>
             </div>
 
-            {/* 6. Cash USD Badge */}
-            <div className="bg-gradient-to-br from-teal-950 to-emerald-950/40 border border-teal-500/60 rounded-xl p-3 text-center shadow-md hover:border-teal-400 transition-all">
-              <div className="w-8 h-8 rounded-full bg-teal-500/20 text-teal-400 flex items-center justify-center mx-auto mb-1.5">
-                <ShieldCheck className="w-4 h-4" />
+            {/* 6. OneMoney Mobile Badge */}
+            <div className="bg-gradient-to-br from-emerald-950 to-slate-900 border border-emerald-500/60 rounded-xl p-3 text-center shadow-md hover:border-emerald-400 transition-all group">
+              <div className="w-12 h-12 rounded-xl overflow-hidden mx-auto mb-2 border border-emerald-400/40 shadow-inner bg-slate-950 p-0.5 group-hover:scale-105 transition-transform">
+                <img
+                  src={PAYMENT_GATEWAY_ASSETS.onemoney}
+                  alt="OneMoney"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover rounded-lg"
+                />
               </div>
-              <div className="font-extrabold text-white text-xs">Cash USD</div>
-              <div className="text-[9px] text-teal-300 font-medium mt-0.5">Direct Placement</div>
+              <div className="font-extrabold text-white text-xs">OneMoney</div>
+              <div className="text-[9px] text-emerald-300 font-medium mt-0.5">NetOne Mobile</div>
             </div>
           </div>
         </div>

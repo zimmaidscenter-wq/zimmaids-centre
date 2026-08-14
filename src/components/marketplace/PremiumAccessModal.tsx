@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { PAYMENT_GATEWAY_ASSETS } from "../common/PaymentBadges";
 import {
   ShieldCheck,
   Lock,
@@ -152,19 +153,35 @@ export const PremiumAccessModal: React.FC<PremiumAccessModalProps> = ({
               {/* Official Payment Instructions */}
               <div className="bg-slate-900 text-white rounded-2xl p-4 space-y-3 border border-slate-800">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1">
-                    <Smartphone className="w-4 h-4" />
-                    Official Payment Details
-                  </span>
-                  <span className="text-[10px] bg-emerald-800 text-emerald-200 font-semibold px-2 py-0.5 rounded-full">
+                  <div className="flex items-center space-x-2">
+                    <img
+                      src={PAYMENT_GATEWAY_ASSETS.ecocash}
+                      alt="EcoCash"
+                      referrerPolicy="no-referrer"
+                      className="w-5 h-5 rounded object-cover"
+                    />
+                    <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">
+                      Official EcoCash Payment Details
+                    </span>
+                  </div>
+                  <span className="text-[10px] bg-blue-900/60 text-blue-200 border border-blue-700/50 font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
                     EcoCash USD / ZWG
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 text-xs bg-slate-800/80 p-3 rounded-xl border border-slate-700">
-                  <div>
-                    <span className="text-[10px] text-slate-400 uppercase block">Payment Method</span>
-                    <span className="font-bold text-white">EcoCash</span>
+                  <div className="flex items-center space-x-2">
+                    <img
+                      src={PAYMENT_GATEWAY_ASSETS.ecocash}
+                      alt="EcoCash"
+                      referrerPolicy="no-referrer"
+                      className="w-8 h-8 rounded-lg object-cover border border-blue-500/40 shrink-0"
+                    />
+                    <div>
+                      <span className="text-[10px] text-slate-400 uppercase block">Payment Method</span>
+                      <span className="font-bold text-white">EcoCash Mobile</span>
+                    </div>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 uppercase block">Recipient Name</span>

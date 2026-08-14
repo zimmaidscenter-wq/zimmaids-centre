@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { SAMPLE_WORKERS, SAMPLE_JOBS } from "../../data/mockData";
-import { WorkerProfile, JobPosting, UserRole, CityLocation } from "../../types/marketplace";
+import { WorkerProfile, JobPosting, UserRole, CityLocation, EmployerHiringRequest } from "../../types/marketplace";
 import { WorkerProfileModal } from "./WorkerProfileModal";
+import { EmployerHiringModal } from "../jobs/EmployerHiringModal";
 import { ALL_ZIMBABWE_CITIES, getSuburbsForCity } from "../../data/zimbabweLocations";
 import {
   Search,
@@ -35,6 +36,14 @@ const CATEGORY_TABS: UserRole[] = [
   "Nanny",
   "Caregiver",
   "Housekeeper",
+  "Shop assistant",
+  "General hand",
+  "Caretaker",
+  "Doctor",
+  "General cleaner",
+  "Mobile carwasher",
+  "Appliance repairer",
+  "Locksmith",
   "Tree cutter",
   "Farm worker",
   "Cook",
@@ -73,6 +82,7 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
   const [cityFilter, setCityFilter] = useState<string>(selectedCity || "Harare");
   const [suburbFilter, setSuburbFilter] = useState<string>("All Suburbs");
   const [verifiedOnlyFilter, setVerifiedOnlyFilter] = useState<boolean>(false);
+  const [isHiringModalOpen, setIsHiringModalOpen] = useState<boolean>(false);
 
   const suburbs = getSuburbsForCity(cityFilter);
 
@@ -170,6 +180,13 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
             <button className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-2xl text-xs font-bold shadow-lg transition-all flex items-center justify-center space-x-2">
               <Filter className="w-4 h-4" />
               <span>Results ({filteredWorkers.length})</span>
+            </button>
+            <button
+              onClick={() => setIsHiringModalOpen(true)}
+              className="px-5 py-3 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 rounded-2xl text-xs font-black shadow-lg transition-all flex items-center justify-center space-x-1.5 active:scale-95"
+            >
+              <Sparkles className="w-4 h-4 fill-slate-950" />
+              <span>Looking for a Helper? Post Request</span>
             </button>
           </div>
         </div>
@@ -404,6 +421,16 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
         onContactWorker={(w) => {
           setSelectedWorker(null);
           onOpenChat(w);
+        }}
+      />
+
+      {/* Employer Hiring Form Modal */}
+      <EmployerHiringModal
+        isOpen={isHiringModalOpen}
+        onClose={() => setIsHiringModalOpen(false)}
+        onSubmitSuccess={() => {
+          setIsHiringModalOpen(false);
+          setActiveSubTab("jobs");
         }}
       />
     </div>

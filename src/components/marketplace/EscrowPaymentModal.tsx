@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { WorkerProfile } from "../../types/marketplace";
+import { PAYMENT_GATEWAY_ASSETS } from "../common/PaymentBadges";
 import {
   CreditCard,
   ShieldCheck,
@@ -147,18 +148,23 @@ export const EscrowPaymentModal: React.FC<EscrowPaymentModalProps> = ({
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block mb-2">
                   Select Payment Gateway (8 Options)
                 </label>
-                <div className="grid grid-cols-2 gap-2 max-h-52 overflow-y-auto pr-1">
+                <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
                   {/* 1. EcoCash */}
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("EcoCash")}
-                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2 transition-all ${
+                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2.5 transition-all ${
                       paymentMethod === "EcoCash"
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-sm ring-1 ring-emerald-500"
+                        ? "border-blue-600 bg-blue-50 text-blue-950 font-bold shadow-sm ring-1 ring-blue-500"
                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
                   >
-                    <Smartphone className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <img
+                      src={PAYMENT_GATEWAY_ASSETS.ecocash}
+                      alt="EcoCash"
+                      referrerPolicy="no-referrer"
+                      className="w-7 h-7 rounded-lg object-cover border border-blue-200 shrink-0 shadow-xs"
+                    />
                     <div>
                       <div className="text-xs">EcoCash</div>
                       <div className="text-[10px] text-slate-500 font-normal">Econet USSD</div>
@@ -169,13 +175,18 @@ export const EscrowPaymentModal: React.FC<EscrowPaymentModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("OneMoney")}
-                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2 transition-all ${
+                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2.5 transition-all ${
                       paymentMethod === "OneMoney"
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-sm ring-1 ring-emerald-500"
+                        ? "border-orange-600 bg-orange-50 text-orange-950 font-bold shadow-sm ring-1 ring-orange-500"
                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
                   >
-                    <Smartphone className="w-4 h-4 text-orange-600 shrink-0" />
+                    <img
+                      src={PAYMENT_GATEWAY_ASSETS.onemoney}
+                      alt="OneMoney"
+                      referrerPolicy="no-referrer"
+                      className="w-7 h-7 rounded-lg object-cover border border-orange-200 shrink-0 shadow-xs"
+                    />
                     <div>
                       <div className="text-xs">OneMoney</div>
                       <div className="text-[10px] text-slate-500 font-normal">NetOne Mobile</div>
@@ -186,13 +197,18 @@ export const EscrowPaymentModal: React.FC<EscrowPaymentModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("InnBucks")}
-                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2 transition-all ${
+                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2.5 transition-all ${
                       paymentMethod === "InnBucks"
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-sm ring-1 ring-emerald-500"
+                        ? "border-amber-600 bg-amber-50 text-amber-950 font-bold shadow-sm ring-1 ring-amber-500"
                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
                   >
-                    <QrCode className="w-4 h-4 text-teal-600 shrink-0" />
+                    <img
+                      src={PAYMENT_GATEWAY_ASSETS.innbucks}
+                      alt="InnBucks"
+                      referrerPolicy="no-referrer"
+                      className="w-7 h-7 rounded-lg object-cover border border-amber-200 shrink-0 shadow-xs"
+                    />
                     <div>
                       <div className="text-xs">InnBucks</div>
                       <div className="text-[10px] text-slate-500 font-normal">Express Code</div>
@@ -203,13 +219,18 @@ export const EscrowPaymentModal: React.FC<EscrowPaymentModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("Mukuru")}
-                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2 transition-all ${
+                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2.5 transition-all ${
                       paymentMethod === "Mukuru"
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-sm ring-1 ring-emerald-500"
+                        ? "border-orange-600 bg-orange-50 text-orange-950 font-bold shadow-sm ring-1 ring-orange-500"
                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
                   >
-                    <Send className="w-4 h-4 text-amber-600 shrink-0" />
+                    <img
+                      src={PAYMENT_GATEWAY_ASSETS.mukuru}
+                      alt="Mukuru"
+                      referrerPolicy="no-referrer"
+                      className="w-7 h-7 rounded-lg object-cover border border-orange-200 shrink-0 shadow-xs"
+                    />
                     <div>
                       <div className="text-xs">Mukuru</div>
                       <div className="text-[10px] text-slate-500 font-normal">Cash Pickup</div>
@@ -220,13 +241,18 @@ export const EscrowPaymentModal: React.FC<EscrowPaymentModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("ZIPIT")}
-                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2 transition-all ${
+                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2.5 transition-all ${
                       paymentMethod === "ZIPIT"
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-sm ring-1 ring-emerald-500"
+                        ? "border-sky-600 bg-sky-50 text-sky-950 font-bold shadow-sm ring-1 ring-sky-500"
                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
                   >
-                    <Zap className="w-4 h-4 text-blue-600 shrink-0" />
+                    <img
+                      src={PAYMENT_GATEWAY_ASSETS.zimswitch}
+                      alt="ZIPIT"
+                      referrerPolicy="no-referrer"
+                      className="w-7 h-7 rounded-lg object-cover border border-sky-200 shrink-0 shadow-xs"
+                    />
                     <div>
                       <div className="text-xs">ZIPIT</div>
                       <div className="text-[10px] text-slate-500 font-normal">Instant Zimswitch</div>
@@ -237,13 +263,18 @@ export const EscrowPaymentModal: React.FC<EscrowPaymentModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("Visa")}
-                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2 transition-all ${
+                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2.5 transition-all ${
                       paymentMethod === "Visa"
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-sm ring-1 ring-emerald-500"
+                        ? "border-indigo-600 bg-indigo-50 text-indigo-950 font-bold shadow-sm ring-1 ring-indigo-500"
                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
                   >
-                    <CreditCard className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <img
+                      src={PAYMENT_GATEWAY_ASSETS.visa}
+                      alt="Visa"
+                      referrerPolicy="no-referrer"
+                      className="w-7 h-7 rounded-lg object-cover border border-indigo-200 shrink-0 shadow-xs"
+                    />
                     <div>
                       <div className="text-xs">Visa</div>
                       <div className="text-[10px] text-slate-500 font-normal">Card Checkout</div>
@@ -254,13 +285,18 @@ export const EscrowPaymentModal: React.FC<EscrowPaymentModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("MasterCard")}
-                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2 transition-all ${
+                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2.5 transition-all ${
                       paymentMethod === "MasterCard"
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-sm ring-1 ring-emerald-500"
+                        ? "border-indigo-600 bg-indigo-50 text-indigo-950 font-bold shadow-sm ring-1 ring-indigo-500"
                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
                   >
-                    <CreditCard className="w-4 h-4 text-rose-600 shrink-0" />
+                    <img
+                      src={PAYMENT_GATEWAY_ASSETS.visa}
+                      alt="MasterCard"
+                      referrerPolicy="no-referrer"
+                      className="w-7 h-7 rounded-lg object-cover border border-indigo-200 shrink-0 shadow-xs"
+                    />
                     <div>
                       <div className="text-xs">MasterCard</div>
                       <div className="text-[10px] text-slate-500 font-normal">Card Checkout</div>
@@ -271,13 +307,15 @@ export const EscrowPaymentModal: React.FC<EscrowPaymentModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("Bank Transfer")}
-                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2 transition-all ${
+                    className={`p-2.5 rounded-xl border text-left flex items-center space-x-2.5 transition-all ${
                       paymentMethod === "Bank Transfer"
-                        ? "border-emerald-600 bg-emerald-50 text-emerald-950 font-bold shadow-sm ring-1 ring-emerald-500"
+                        ? "border-slate-800 bg-slate-100 text-slate-950 font-bold shadow-sm ring-1 ring-slate-700"
                         : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
                     }`}
                   >
-                    <Landmark className="w-4 h-4 text-slate-700 shrink-0" />
+                    <div className="w-7 h-7 rounded-lg bg-slate-800 text-white flex items-center justify-center shrink-0">
+                      <Landmark className="w-4 h-4" />
+                    </div>
                     <div>
                       <div className="text-xs">Bank Transfer</div>
                       <div className="text-[10px] text-slate-500 font-normal">RTGS / Nostro IBAN</div>

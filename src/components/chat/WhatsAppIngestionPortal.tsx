@@ -32,6 +32,13 @@ import {
 import { UserRole, CityLocation, WorkerProfile, JobPosting } from "../../types/marketplace";
 import { SAMPLE_WORKERS, SAMPLE_JOBS } from "../../data/mockData";
 import { whatsappSyncService, SyncLogEntry } from "../../services/whatsappSyncService";
+import { WhatsAppProfileImportModal } from "./WhatsAppProfileImportModal";
+import {
+  convertRegistrationToWorkerProfile,
+  WHATSAPP_STANDARD_GROUP_TEMPLATE,
+  WHATSAPP_SAMPLE_FILLED_PROFILE,
+} from "../../utils/whatsappTemplates";
+import { StandardizedWorkerRegistration } from "../../types/workerRegistration";
 
 interface WhatsAppIngestionPortalProps {
   onWorkerAdded?: (worker: WorkerProfile) => void;
@@ -45,6 +52,7 @@ export const WhatsAppIngestionPortal: React.FC<WhatsAppIngestionPortalProps> = (
   onNavigateToMarketplace,
 }) => {
   const [activePortalTab, setActivePortalTab] = useState<"auto-sync" | "text-parser" | "sync-audit">("auto-sync");
+  const [showFullImportModal, setShowFullImportModal] = useState<boolean>(false);
 
   // State for Text Parser
   const [rawText, setRawText] = useState<string>("");
@@ -115,17 +123,8 @@ export const WhatsAppIngestionPortal: React.FC<WhatsAppIngestionPortalProps> = (
     event.target.value = "";
   };
 
-  // Sample WhatsApp Message Presets
-  const SAMPLE_WHATSAPP_WORKER = `Name: Tariro Moyo
-Role: Maid & Housekeeper
-City: Harare, Borrowdale
-Phone: +263785458828
-Salary: $220/month or $15/day
-Experience: 6 years
-Age: 29, Female
-Skills: Full Housekeeping, Laundry & Ironing, Traditional Cooking, Floor Polishing
-Verifications: ZRP Police CID Cleared, Medical Fitness Cert
-Bio: Experienced full-time maid specializing in house cleaning, laundry, floor care, and family meal preparation in Borrowdale and surrounding suburbs.`;
+  // Sample WhatsApp Message Presets matching Standard WhatsApp Group Format
+  const SAMPLE_WHATSAPP_WORKER = WHATSAPP_SAMPLE_FILLED_PROFILE;
 
   const SAMPLE_WHATSAPP_JOB = `JOB VACANCY: Part-Time Maid Needed
 Employer: Mrs. Chigumba
@@ -197,6 +196,13 @@ Description: Seeking an experienced part-time maid for 3 days per week in Avonda
             <span className="px-3 py-1 bg-emerald-900/80 text-emerald-300 rounded-xl font-mono border border-emerald-700">
               Official WhatsApp: {SUPPORT_PHONE}
             </span>
+            <button
+              onClick={() => setShowFullImportModal(true)}
+              className="px-4 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black rounded-xl shadow-lg flex items-center gap-1.5 transition-all text-xs active:scale-95"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Launch 6-Step WhatsApp Import Engine</span>
+            </button>
             <button
               onClick={handleToggleDaemon}
               className={`px-3.5 py-1 rounded-xl font-bold flex items-center gap-1.5 transition-all ${
@@ -533,24 +539,33 @@ Description: Seeking an experienced part-time maid for 3 days per week in Avonda
 
             {/* Standard WhatsApp Group Templates Box */}
             <div className="bg-slate-900 text-white border border-slate-800 rounded-3xl p-6 space-y-4">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
                 <h4 className="font-extrabold text-sm text-white flex items-center gap-2">
                   <Share2 className="w-4 h-4 text-emerald-400" />
                   <span>Standard WhatsApp Group Format Templates</span>
                 </h4>
-                <button
-                  onClick={() => handleCopyTemplate(ingestionType === "worker" ? SAMPLE_WHATSAPP_WORKER : SAMPLE_WHATSAPP_JOB)}
-                  className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-xl text-xs font-bold border border-slate-700 flex items-center gap-1.5"
-                >
-                  {copiedTemplate ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span>{copiedTemplate ? "Copied!" : "Copy Template"}</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleCopyTemplate(WHATSAPP_STANDARD_GROUP_TEMPLATE)}
+                    className="px-3 py-1 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold border border-emerald-600 flex items-center gap-1.5 transition-colors"
+                  >
+                    {copiedTemplate ? <Check className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copiedTemplate ? "Copied!" : "Copy Blank Template"}</span>
+                  </button>
+                  <button
+                    onClick={() => handleCopyTemplate(SAMPLE_WHATSAPP_WORKER)}
+                    className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-xl text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span>Copy Sample</span>
+                  </button>
+                </div>
               </div>
               <p className="text-xs text-slate-400">
-                Copy and send these templates to candidates or employers on WhatsApp groups so they reply with structured fields for automated parsing.
+                Copy and broadcast this official format to candidate and employer WhatsApp groups so responses are structured and parsed instantly:
               </p>
-              <pre className="p-3 bg-slate-950 rounded-2xl text-[11px] font-mono text-emerald-300 overflow-x-auto border border-slate-800">
-                {ingestionType === "worker" ? SAMPLE_WHATSAPP_WORKER : SAMPLE_WHATSAPP_JOB}
+              <pre className="p-4 bg-slate-950 rounded-2xl text-[11px] font-mono text-emerald-300 whitespace-pre-wrap overflow-x-auto border border-slate-800 max-h-64 overflow-y-auto leading-relaxed">
+                {ingestionType === "worker" ? WHATSAPP_STANDARD_GROUP_TEMPLATE : SAMPLE_WHATSAPP_JOB}
               </pre>
             </div>
           </div>
@@ -743,6 +758,22 @@ Description: Seeking an experienced part-time maid for 3 days per week in Avonda
             </table>
           </div>
         </div>
+      )}
+
+      {/* WHATSAPP 6-STEP PROFILE IMPORT MODAL */}
+      {showFullImportModal && (
+        <WhatsAppProfileImportModal
+          isOpen={showFullImportModal}
+          onClose={() => setShowFullImportModal(false)}
+          onImportComplete={(imported) => {
+            const mappedWorker = convertRegistrationToWorkerProfile(imported);
+            if (onWorkerAdded) {
+              onWorkerAdded(mappedWorker);
+            }
+            setShowFullImportModal(false);
+            setSuccessMessage(`Candidate "${imported.fullName}" successfully imported via 6-Step WhatsApp Engine!`);
+          }}
+        />
       )}
     </div>
   );

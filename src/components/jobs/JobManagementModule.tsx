@@ -31,11 +31,17 @@ import {
   ShieldCheck,
   Building,
   UserCheck,
-  RefreshCw
+  RefreshCw,
+  Home,
+  Users,
+  Bed,
+  Dog,
+  HeartHandshake
 } from "lucide-react";
-import { JobPosting, UserRole, CityLocation } from "../../types/marketplace";
+import { JobPosting, UserRole, CityLocation, HelperType, PrimaryFocusRole, EmployerHiringRequest } from "../../types/marketplace";
 import { SAMPLE_JOBS } from "../../data/mockData";
 import { ALL_ZIMBABWE_CITIES, getSuburbsForCity } from "../../data/zimbabweLocations";
+import { EmployerHiringModal } from "./EmployerHiringModal";
 
 interface JobManagementModuleProps {
   currency?: "USD" | "ZWG";
@@ -176,6 +182,7 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
 
   // Modals State
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isEmployerHiringModalOpen, setIsEmployerHiringModalOpen] = useState(false);
   const [editingJob, setEditingJob] = useState<JobPosting | null>(null);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
   const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
@@ -190,6 +197,16 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
     offeredSalaryUSD: 240,
     payFrequency: "Monthly" as const,
     workType: "Full-Time" as const,
+    helperType: "Live-In" as HelperType,
+    primaryFocus: "Housekeeping" as PrimaryFocusRole,
+    preferredAges: "25 - 45 years",
+    numKids: 2,
+    numAdults: 2,
+    numBedrooms: 3,
+    pets: "1 Dog (Friendly)",
+    specialNeeds: "",
+    proposedOffDays: "Alternate Weekends (Saturday afternoon to Sunday evening)",
+    staffAccommodation: "Own en-suite bedroom with private bathroom and solar power backup",
     description: "",
     requiredSkills: "Deep Cleaning, First Aid, Laundry",
     urgent: false,
@@ -275,6 +292,18 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
                 offeredSalaryUSD: Number(formData.offeredSalaryUSD),
                 payFrequency: formData.payFrequency,
                 workType: formData.workType,
+                helperType: formData.helperType,
+                primaryFocus: formData.primaryFocus,
+                preferredAges: formData.preferredAges,
+                householdDetails: {
+                  kids: formData.numKids,
+                  adults: formData.numAdults,
+                  bedrooms: formData.numBedrooms,
+                  pets: formData.pets,
+                },
+                specialNeeds: formData.specialNeeds,
+                proposedOffDays: formData.proposedOffDays,
+                staffAccommodation: formData.staffAccommodation,
                 description: formData.description,
                 requiredSkills: skillsArray,
                 urgent: formData.urgent,
@@ -289,7 +318,7 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
       // Create new
       const newJob: JobPosting = {
         id: `j-${Date.now()}`,
-        title: formData.title || "Domestic Opportunity",
+        title: formData.title || `${formData.helperType} ${formData.primaryFocus} in ${formData.suburb}, ${formData.city}`,
         roleNeeded: formData.roleNeeded,
         employerName: formData.employerName || "Private Employer",
         city: formData.city,
@@ -297,6 +326,18 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
         offeredSalaryUSD: Number(formData.offeredSalaryUSD),
         payFrequency: formData.payFrequency,
         workType: formData.workType,
+        helperType: formData.helperType,
+        primaryFocus: formData.primaryFocus,
+        preferredAges: formData.preferredAges,
+        householdDetails: {
+          numberOfKids: formData.numKids,
+          numberOfAdults: formData.numAdults,
+          numberOfBedrooms: formData.numBedrooms,
+          pets: formData.pets,
+        },
+        specialNeeds: formData.specialNeeds,
+        proposedOffDays: formData.proposedOffDays,
+        staffAccommodation: formData.staffAccommodation,
         description: formData.description,
         requiredSkills: skillsArray,
         postedDate: new Date().toISOString().split("T")[0],
@@ -311,6 +352,44 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
 
     setShowCreateModal(false);
     setEditingJob(null);
+  };
+
+  // Handle direct submission from EmployerHiringModal
+  const handleEmployerHiringSuccess = (req: EmployerHiringRequest) => {
+    const newJob: JobPosting = {
+      id: `hiring-${Date.now()}`,
+      title: `${req.helperType} ${req.primaryFocus} needed in ${req.physicalAddress.suburb}, ${req.physicalAddress.city}`,
+      roleNeeded: req.primaryFocus === "Nanny" ? "Nanny" : req.primaryFocus === "Chef" ? "Chef" : req.primaryFocus === "Gardener" ? "Gardener" : "Housekeeper",
+      employerName: req.fullName,
+      city: req.physicalAddress.city as CityLocation,
+      suburb: req.physicalAddress.suburb,
+      offeredSalaryUSD: req.offeredSalaryUSD || 240,
+      payFrequency: "Monthly",
+      workType: req.helperType === "Live-In" ? "Live-In" : "Full-Time",
+      helperType: req.helperType,
+      primaryFocus: req.primaryFocus,
+      preferredAges: req.preferredAges,
+      householdDetails: {
+        numberOfKids: req.householdDetails.numberOfKids,
+        numberOfAdults: req.householdDetails.numberOfAdults,
+        numberOfBedrooms: req.householdDetails.numberOfBedrooms,
+        pets: req.householdDetails.pets,
+      },
+      specialNeeds: req.specialNeeds,
+      proposedOffDays: req.proposedOffDays,
+      staffAccommodation: req.staffAccommodation,
+      description: `Employer ${req.fullName} is hiring a ${req.helperType} helper with primary focus on ${req.primaryFocus}. Household has ${req.householdDetails.numberOfKids} kids, ${req.householdDetails.numberOfAdults} adults, ${req.householdDetails.numberOfBedrooms} bedrooms, and pets: "${req.householdDetails.pets}". Special needs: ${req.specialNeeds || "None specified"}. Accommodation: ${req.staffAccommodation}. Off-days: ${req.proposedOffDays}.`,
+      requiredSkills: [req.primaryFocus, "Honest & Reliable", "Zimbabwe References", "Police Clearance"],
+      postedDate: new Date().toISOString().split("T")[0],
+      applicantCount: 0,
+      status: "Open",
+      urgent: true,
+      isFeatured: true,
+    };
+
+    setJobsList(prev => [newJob, ...prev]);
+    setIsEmployerHiringModalOpen(false);
+    showToast(`Employer Hiring Request for ${req.fullName} published to Job Marketplace!`);
   };
 
   // Delete Job
@@ -400,6 +479,14 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
 
           <div className="flex flex-wrap items-center gap-2">
             <button
+              onClick={() => setIsEmployerHiringModalOpen(true)}
+              className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center space-x-1.5 active:scale-95 border border-emerald-300/40"
+            >
+              <Sparkles className="w-4 h-4 text-emerald-950 fill-emerald-950" />
+              <span>Employer Hiring Form</span>
+            </button>
+
+            <button
               onClick={() => {
                 setEditingJob(null);
                 setFormData({
@@ -411,6 +498,16 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
                   offeredSalaryUSD: 240,
                   payFrequency: "Monthly",
                   workType: "Full-Time",
+                  helperType: "Live-In",
+                  primaryFocus: "Housekeeping",
+                  preferredAges: "25 - 45 years",
+                  numKids: 2,
+                  numAdults: 2,
+                  numBedrooms: 3,
+                  pets: "1 Dog (Friendly)",
+                  specialNeeds: "",
+                  proposedOffDays: "Alternate Weekends (Saturday afternoon to Sunday evening)",
+                  staffAccommodation: "Own en-suite bedroom with private bathroom and solar power backup",
                   description: "",
                   requiredSkills: "Deep Cleaning, First Aid, Laundry",
                   urgent: false,
@@ -418,15 +515,15 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
                 });
                 setShowCreateModal(true);
               }}
-              className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs rounded-xl shadow-lg transition-all flex items-center space-x-1.5 active:scale-95"
+              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center space-x-1.5 border border-slate-700 active:scale-95"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4 text-emerald-400" />
               <span>Post New Vacancy</span>
             </button>
 
             <button
               onClick={() => setActiveTab("calculator")}
-              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-slate-700 font-bold text-xs rounded-xl shadow-md transition-all flex items-center space-x-1.5"
+              className="px-4 py-2.5 bg-slate-800/80 hover:bg-slate-700 text-emerald-300 border border-slate-700 font-bold text-xs rounded-xl shadow-md transition-all flex items-center space-x-1.5"
             >
               <Calculator className="w-4 h-4 text-emerald-400" />
               <span>Salary Calculator</span>
@@ -697,6 +794,69 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
 
                   {/* Description */}
                   <p className="text-xs text-slate-600 leading-relaxed line-clamp-2">{job.description}</p>
+
+                  {/* Structured Employer Hiring Spec / Household Badges */}
+                  {(job.helperType || job.primaryFocus || job.householdDetails || job.staffAccommodation || job.specialNeeds) && (
+                    <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-2.5 space-y-2 text-[11px]">
+                      <div className="flex flex-wrap items-center gap-1.5 font-bold">
+                        {job.helperType && (
+                          <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 rounded-md flex items-center gap-1">
+                            <Home className="w-3 h-3 text-emerald-700" />
+                            <span>{job.helperType}</span>
+                          </span>
+                        )}
+                        {job.primaryFocus && (
+                          <span className="px-2 py-0.5 bg-teal-100 text-teal-900 rounded-md flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-teal-700" />
+                            <span>Focus: {job.primaryFocus}</span>
+                          </span>
+                        )}
+                        {job.preferredAges && (
+                          <span className="px-2 py-0.5 bg-amber-100 text-amber-900 rounded-md">
+                            Age: {job.preferredAges}
+                          </span>
+                        )}
+                      </div>
+
+                      {job.householdDetails && (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 text-slate-600">
+                          <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200 text-[10px]">
+                            <Users className="w-3 h-3 text-slate-400" />
+                            <span><strong>{job.householdDetails.numberOfKids}</strong> Kids</span>
+                          </div>
+                          <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200 text-[10px]">
+                            <Users className="w-3 h-3 text-slate-400" />
+                            <span><strong>{job.householdDetails.numberOfAdults}</strong> Adults</span>
+                          </div>
+                          <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200 text-[10px]">
+                            <Bed className="w-3 h-3 text-slate-400" />
+                            <span><strong>{job.householdDetails.numberOfBedrooms}</strong> Beds</span>
+                          </div>
+                          <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-lg border border-slate-200 text-[10px] truncate">
+                            <Dog className="w-3 h-3 text-slate-400" />
+                            <span className="truncate">{job.householdDetails.pets || "No Pets"}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {job.specialNeeds && (
+                        <div className="text-[10px] text-amber-900 bg-amber-50/80 px-2 py-1 rounded-lg border border-amber-200/60 font-medium">
+                          <strong>Special Needs:</strong> {job.specialNeeds}
+                        </div>
+                      )}
+
+                      {(job.proposedOffDays || job.staffAccommodation) && (
+                        <div className="text-[10px] text-slate-500 flex flex-wrap gap-x-3 gap-y-1">
+                          {job.proposedOffDays && (
+                            <span>🗓️ <strong>Off-Days:</strong> {job.proposedOffDays}</span>
+                          )}
+                          {job.staffAccommodation && (
+                            <span>🏡 <strong>Accommodation:</strong> {job.staffAccommodation}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Required Skills Badges */}
                   <div className="flex flex-wrap gap-1.5 pt-1">
@@ -1100,10 +1260,141 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
                 </div>
               </div>
 
+              {/* Helper Type & Primary Focus */}
+              <div className="grid grid-cols-2 gap-2 bg-emerald-50/60 p-2.5 rounded-2xl border border-emerald-200/60">
+                <div>
+                  <label className="font-bold text-slate-800 block mb-1">Helper Type</label>
+                  <select
+                    value={formData.helperType}
+                    onChange={e => setFormData({ ...formData, helperType: e.target.value as HelperType })}
+                    className="w-full px-3 py-2 bg-white border border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+                  >
+                    <option value="Live-In">Live-In</option>
+                    <option value="Live-Out/Day Worker">Live-Out / Day Worker</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-800 block mb-1">Primary Focus</label>
+                  <select
+                    value={formData.primaryFocus}
+                    onChange={e => setFormData({ ...formData, primaryFocus: e.target.value as PrimaryFocusRole })}
+                    className="w-full px-3 py-2 bg-white border border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
+                  >
+                    <option value="Housekeeping">Housekeeping</option>
+                    <option value="Nanny">Nanny</option>
+                    <option value="Elderly Care">Elderly Care</option>
+                    <option value="Chef">Chef</option>
+                    <option value="Gardener">Gardener</option>
+                    <option value="Maid">Maid</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Household Specs */}
+              <div className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-slate-800">Household Details</span>
+                  <span className="text-[10px] text-slate-500">For accurate candidate matching</span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <div>
+                    <label className="font-bold text-slate-600 block mb-1">Kids Count</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.numKids}
+                      onChange={e => setFormData({ ...formData, numKids: Math.max(0, parseInt(e.target.value) || 0) })}
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-center font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-600 block mb-1">Adults Count</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.numAdults}
+                      onChange={e => setFormData({ ...formData, numAdults: Math.max(1, parseInt(e.target.value) || 1) })}
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-center font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-600 block mb-1">Bedrooms</label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.numBedrooms}
+                      onChange={e => setFormData({ ...formData, numBedrooms: Math.max(1, parseInt(e.target.value) || 1) })}
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-center font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-600 block mb-1">Pets Info</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 2 Dogs"
+                      value={formData.pets}
+                      onChange={e => setFormData({ ...formData, pets: e.target.value })}
+                      className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg font-bold"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                  <div>
+                    <label className="font-bold text-slate-600 block mb-1">Preferred Helper Ages</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 25 - 45 years"
+                      value={formData.preferredAges}
+                      onChange={e => setFormData({ ...formData, preferredAges: e.target.value })}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg"
+                    />
+                  </div>
+                  <div>
+                    <label className="font-bold text-slate-600 block mb-1">Proposed Off Days</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Alternate weekends / Every Sunday"
+                      value={formData.proposedOffDays}
+                      onChange={e => setFormData({ ...formData, proposedOffDays: e.target.value })}
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="font-bold text-slate-600 block mb-1">Staff Accommodation</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Own en-suite bedroom with solar power & WiFi"
+                    value={formData.staffAccommodation}
+                    onChange={e => setFormData({ ...formData, staffAccommodation: e.target.value })}
+                    className="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg"
+                  />
+                </div>
+              </div>
+
+              {/* Special Needs Blank Space */}
+              <div>
+                <label className="font-bold text-slate-700 block mb-1 flex items-center justify-between">
+                  <span>Special Needs & Requests (Blank space for employer requirements)</span>
+                  <span className="text-[10px] text-emerald-600 font-normal">Optional</span>
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Specify any dietary requirements, medical support, infant experience, swimming skills, solar handling..."
+                  value={formData.specialNeeds}
+                  onChange={e => setFormData({ ...formData, specialNeeds: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
               <div>
                 <label className="font-bold text-slate-700 block mb-1">Job Description & Duties</label>
                 <textarea
-                  rows={3}
+                  rows={2}
                   placeholder="Describe household duties, working hours, and expectations..."
                   value={formData.description}
                   onChange={e => setFormData({ ...formData, description: e.target.value })}
@@ -1164,6 +1455,13 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
           </div>
         </div>
       )}
+
+      {/* Standalone Employer Hiring Form Modal */}
+      <EmployerHiringModal
+        isOpen={isEmployerHiringModalOpen}
+        onClose={() => setIsEmployerHiringModalOpen(false)}
+        onSubmitSuccess={handleEmployerHiringSuccess}
+      />
 
       {/* CONFIRM DELETE MODAL */}
       {deletingJobId && (

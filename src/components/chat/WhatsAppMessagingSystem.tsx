@@ -43,6 +43,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { UserRole, CityLocation } from "../../types/marketplace";
+import { ZMC_OFFICIAL_LOGO } from "../common/BrandLogo";
 
 // TYPES
 export type ReadStatus = "sent" | "delivered" | "read";
@@ -652,8 +653,13 @@ export const WhatsAppMessagingSystem: React.FC = () => {
           {/* WhatsApp Sidebar Header */}
           <div className="bg-emerald-900 text-white p-4 flex items-center justify-between shadow-sm shrink-0">
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-500/30 border border-emerald-400/40 flex items-center justify-center">
-                <MessageSquare className="w-5 h-5 text-emerald-300 fill-emerald-300/30" />
+              <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-emerald-400 bg-white shadow-md shrink-0">
+                <img
+                  src={ZMC_OFFICIAL_LOGO}
+                  alt="Zimbabwe Maids Centre"
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                />
               </div>
               <div>
                 <h2 className="font-black text-sm text-white tracking-tight flex items-center gap-1.5">

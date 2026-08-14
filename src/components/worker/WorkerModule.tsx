@@ -1,5 +1,14 @@
 import React, { useState } from "react";
 import { ALL_ZIMBABWE_CITIES, getSuburbsForCity } from "../../data/zimbabweLocations";
+import { WorkerRegistrationWizard } from "./WorkerRegistrationWizard";
+import { WhatsAppProfileImportModal } from "../chat/WhatsAppProfileImportModal";
+import { StandardizedWorkerRegistration } from "../../types/workerRegistration";
+import { PortfolioItem } from "../../types/marketplace";
+import { PortfolioViewerModal } from "../marketplace/PortfolioViewerModal";
+import { AddPortfolioItemModal } from "../marketplace/AddPortfolioItemModal";
+import { ProfileCompletenessWidget } from "../common/ProfileCompletenessWidget";
+import { CandidatePhotosManager, CandidatePhotosState } from "../marketplace/CandidatePhotosManager";
+import { VerifiedBadge } from "../common/VerifiedBadge";
 import {
   User,
   FileText,
@@ -33,7 +42,12 @@ import {
   Check,
   TrendingUp,
   X,
-  CheckSquare
+  CheckSquare,
+  MessageSquare,
+  Building,
+  Image as ImageIcon,
+  Layers,
+  FileCheck2
 } from "lucide-react";
 
 interface WorkerModuleProps {
@@ -43,7 +57,9 @@ interface WorkerModuleProps {
 export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) => {
   const [activeTab, setActiveTab] = useState<
     | "profile"
-    | "registration"
+    | "photos"
+    | "portfolio"
+    | "wizard-registration"
     | "documents"
     | "skills-exp"
     | "verification"
@@ -52,19 +68,23 @@ export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) 
     | "ai-review"
   >("profile");
 
-  // Registration state
-  const [showRegModal, setShowRegModal] = useState<boolean>(false);
-  const [regData, setRegData] = useState({
-    fullName: "",
-    nationalId: "",
-    phone: "",
-    role: "Maid",
-    city: "Harare",
-    suburb: "Borrowdale",
-    rateUSD: 200,
-    workMode: "Live-in",
+  // Registration states
+  const [showWizardModal, setShowWizardModal] = useState<boolean>(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState<boolean>(false);
+  const [successBanner, setSuccessBanner] = useState<string | null>(null);
+
+  // Portfolio modals & viewer state
+  const [isAddPortfolioOpen, setIsAddPortfolioOpen] = useState<boolean>(false);
+  const [selectedPortfolioItem, setSelectedPortfolioItem] = useState<PortfolioItem | null>(null);
+  const [isPortfolioViewerOpen, setIsPortfolioViewerOpen] = useState<boolean>(false);
+  const [portfolioFilter, setPortfolioFilter] = useState<"All" | "Photos" | "Documents">("All");
+
+  // Candidate Appearance 3-Photos State (Profile Headshot, Full-Length, Work Action)
+  const [candidatePhotos, setCandidatePhotos] = useState<CandidatePhotosState>({
+    primaryProfilePhoto: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=400",
+    fullLengthPhoto: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=800",
+    workActionPhoto: "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=800",
   });
-  const [regSuccess, setRegSuccess] = useState<boolean>(false);
 
   // Worker state data
   const [workerProfile, setWorkerProfile] = useState({
@@ -84,6 +104,71 @@ export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) 
     policeClearanceDate: "2026-06-15",
     policeVerified: true,
   });
+
+  // Portfolio items state (Photos & Verified Documents)
+  const [portfolio, setPortfolio] = useState<PortfolioItem[]>([
+    {
+      id: "port-1",
+      title: "Deep Kitchen Cleaning & Pantry Organization",
+      category: "Cleaning / Ironing Proof",
+      fileType: "image",
+      url: "https://images.unsplash.com/photo-1556911220-e15b29be8c8f?auto=format&fit=crop&q=80&w=800",
+      description: "Spotless counter cleaning, degreased oven surfaces, and arranged pantry storage in Borrowdale home.",
+      uploadedAt: "2026-03-01",
+      fileSize: "1.5 MB",
+      isVerified: true,
+    },
+    {
+      id: "port-2",
+      title: "Employer Reference Letter — Mrs. Sarah Jenkins",
+      category: "Reference Letter",
+      fileType: "pdf",
+      url: "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&q=80&w=600",
+      issuerOrEmployer: "Mrs. Sarah Jenkins (Borrowdale, Harare)",
+      rating: 5,
+      documentContent: "Chipo Moyo worked for our household as a Live-in Nanny & Housekeeper for over 3 years. She is exceptionally honest, punctual, and maintains the highest standards of cleanliness and child care. We recommend her without reservation.",
+      description: "Signed formal recommendation letter from Jenkins household.",
+      uploadedAt: "2026-02-15",
+      fileSize: "1.2 MB",
+      isVerified: true,
+    },
+    {
+      id: "port-3",
+      title: "Toddler Learning & Play Activity Setup",
+      category: "Childcare / Cooking Proof",
+      fileType: "image",
+      url: "https://images.unsplash.com/photo-1587654780291-39c9404d746b?auto=format&fit=crop&q=80&w=800",
+      description: "Montessori-style creative play station and structured educational learning for 2 toddlers.",
+      uploadedAt: "2026-01-28",
+      fileSize: "1.9 MB",
+      isVerified: true,
+    },
+    {
+      id: "port-4",
+      title: "Steam Pressing & Wardrobe Color Arrangement",
+      category: "Cleaning / Ironing Proof",
+      fileType: "image",
+      url: "https://images.unsplash.com/photo-1582735689369-4fe89db7114c?auto=format&fit=crop&q=80&w=800",
+      description: "Delicate linen steam pressing and color-coordinated wardrobe organization.",
+      uploadedAt: "2026-01-10",
+      fileSize: "1.6 MB",
+      isVerified: true,
+    },
+    {
+      id: "port-5",
+      title: "Zimbabwe Red Cross Infant First Aid Certificate",
+      category: "Certificates / Education",
+      fileType: "pdf",
+      url: "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&q=80&w=600",
+      issuerOrEmployer: "Zimbabwe Red Cross Society (Harare)",
+      rating: 5,
+      documentContent: "Official certificate of competence in Infant CPR, Choking Management, and Pediatric First Aid. Validated and certified.",
+      description: "Official vocational certification badge.",
+      uploadedAt: "2025-11-20",
+      fileSize: "2.1 MB",
+      isVerified: true,
+    }
+  ]);
 
   // Certificates list
   const [certificates, setCertificates] = useState([
@@ -133,6 +218,31 @@ export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) 
   // AI Resume Review State
   const [aiReview, setAiReview] = useState<any>(null);
   const [loadingAi, setLoadingAi] = useState<boolean>(false);
+
+  const handleAddPortfolioItem = (newItem: PortfolioItem) => {
+    setPortfolio((prev) => [newItem, ...prev]);
+    setSuccessBanner(`Successfully added "${newItem.title}" to your verified portfolio!`);
+  };
+
+  const handleDeletePortfolioItem = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPortfolio((prev) => prev.filter((item) => item.id !== id));
+  };
+
+  const handleOpenPortfolioItem = (item: PortfolioItem) => {
+    setSelectedPortfolioItem(item);
+    setIsPortfolioViewerOpen(true);
+  };
+
+  const filteredPortfolio = portfolio.filter((item) => {
+    if (portfolioFilter === "Photos") {
+      return item.fileType === "image" && !item.category.includes("Letter") && !item.category.includes("Document");
+    }
+    if (portfolioFilter === "Documents") {
+      return item.fileType === "pdf" || item.category.includes("Letter") || item.category.includes("Clearance") || item.category.includes("Certificate");
+    }
+    return true;
+  });
 
   // Handle AI Resume Review call
   const handleRunAiReview = async () => {
@@ -196,7 +306,7 @@ export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) 
                 alt={workerProfile.name}
                 className="w-20 h-20 rounded-2xl object-cover border-2 border-emerald-400/80 shadow-lg"
               />
-              <span className="absolute -bottom-1 -right-1 bg-emerald-500 text-slate-950 p-1 rounded-full border-2 border-emerald-950" title="ZRP Verified">
+              <span className="absolute -bottom-1 -right-1 bg-emerald-500 text-slate-950 p-1 rounded-full border-2 border-emerald-950" title="Verified Candidate">
                 <CheckCircle2 className="w-4 h-4" />
               </span>
             </div>
@@ -231,11 +341,19 @@ export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) 
           {/* Action CTAs */}
           <div className="flex flex-wrap items-center gap-2">
             <button
-              onClick={() => setShowRegModal(true)}
+              onClick={() => setShowWizardModal(true)}
               className="px-4 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs rounded-xl shadow-lg transition-all flex items-center space-x-1.5 active:scale-95"
             >
               <Plus className="w-4 h-4" />
-              <span>Register New Profile</span>
+              <span>Register Worker (6-Step Wizard)</span>
+            </button>
+
+            <button
+              onClick={() => setShowWhatsAppModal(true)}
+              className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-600 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all flex items-center space-x-1.5 active:scale-95 border border-emerald-500/40"
+            >
+              <MessageSquare className="w-4 h-4 text-emerald-300" />
+              <span>WhatsApp Profile Import</span>
             </button>
 
             <button
@@ -252,6 +370,21 @@ export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) 
         </div>
       </div>
 
+      {successBanner && (
+        <div className="p-4 bg-emerald-900/90 text-white rounded-2xl border border-emerald-500 flex items-center justify-between shadow-lg animate-in fade-in">
+          <div className="flex items-center space-x-3 text-xs sm:text-sm font-bold">
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+            <span>{successBanner}</span>
+          </div>
+          <button
+            onClick={() => setSuccessBanner(null)}
+            className="text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg text-white font-bold"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Main Module Tabs */}
       <div className="bg-white border border-slate-200 rounded-2xl p-2 shadow-sm flex flex-wrap items-center gap-1.5 overflow-x-auto">
         <button
@@ -264,6 +397,42 @@ export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) 
         >
           <User className="w-3.5 h-3.5 text-emerald-400" />
           <span>Profile Dashboard</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("photos")}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 ${
+            activeTab === "photos"
+              ? "bg-emerald-900 text-white shadow-md"
+              : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <Camera className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Candidate Photos (3 Views)</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("portfolio")}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 ${
+            activeTab === "portfolio"
+              ? "bg-emerald-900 text-white shadow-md"
+              : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <Layers className="w-3.5 h-3.5 text-emerald-400" />
+          <span>Portfolio & Work Proof ({portfolio.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("wizard-registration")}
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 shrink-0 ${
+            activeTab === "wizard-registration"
+              ? "bg-emerald-900 text-white shadow-md"
+              : "text-slate-600 hover:bg-slate-100"
+          }`}
+        >
+          <Plus className="w-3.5 h-3.5 text-emerald-400" />
+          <span>6-Step Registration Wizard</span>
         </button>
 
         <button
@@ -299,7 +468,7 @@ export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) 
           }`}
         >
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-          <span>ZRP Police & Vetting</span>
+          <span>Verified Background & Vetting</span>
         </button>
 
         <button
@@ -339,9 +508,86 @@ export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) 
         </button>
       </div>
 
+      {/* Dynamic Profile & Portfolio Completeness Progress Bar (Encourages High-Quality Submissions) */}
+      <ProfileCompletenessWidget
+        profile={{
+          ...workerProfile,
+          photoUrl: candidatePhotos.primaryProfilePhoto,
+          candidatePhotos: candidatePhotos,
+          fullLengthPhotoUrl: candidatePhotos.fullLengthPhoto,
+          workActionPhotoUrl: candidatePhotos.workActionPhoto,
+          policeVerified: workerProfile.policeVerified,
+          verifiedReferencesCount: references.length,
+          skills: skills.map((s) => s.name),
+        }}
+        portfolio={portfolio}
+        variant="detailed"
+        onActionClick={(actionId) => {
+          if (actionId === "upload_photos") {
+            setActiveTab("photos");
+          } else if (actionId === "upload_portfolio") {
+            setIsAddPortfolioOpen(true);
+          } else if (actionId === "upload_clearance") {
+            setActiveTab("verification");
+          } else if (actionId === "upload_reference") {
+            setIsAddPortfolioOpen(true);
+          } else if (actionId === "fill_bio" || actionId === "add_skills") {
+            setActiveTab("skills-exp");
+          }
+        }}
+      />
+
+      {/* TAB: CANDIDATE APPEARANCE PHOTOS (3 VIEWS) */}
+      {activeTab === "photos" && (
+        <div className="space-y-6">
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm">
+            <div className="max-w-3xl mb-6">
+              <div className="inline-flex items-center space-x-2 px-3 py-1 bg-emerald-100 text-emerald-800 rounded-full text-xs font-black tracking-wider uppercase mb-2">
+                <Camera className="w-3.5 h-3.5" />
+                <span>Verified Candidate Visual ID</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-slate-900">
+                Candidate Appearance & Identity Photos
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-600 mt-1">
+                Clients want to see who they are hiring. Upload your clear profile picture, a full-length standing photo, and an in-action photo of your housekeeping, cooking, or childcare work.
+              </p>
+            </div>
+
+            <CandidatePhotosManager
+              photos={candidatePhotos}
+              onChange={(updated) => {
+                setCandidatePhotos(updated);
+                if (updated.primaryProfilePhoto) {
+                  setWorkerProfile((prev) => ({
+                    ...prev,
+                    photoUrl: updated.primaryProfilePhoto,
+                  }));
+                }
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* TAB 1: PROFILE DASHBOARD */}
       {activeTab === "profile" && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="space-y-6">
+          {/* Quick Candidate Photos Editor on Profile Tab */}
+          <CandidatePhotosManager
+            photos={candidatePhotos}
+            onChange={(updated) => {
+              setCandidatePhotos(updated);
+              if (updated.primaryProfilePhoto) {
+                setWorkerProfile((prev) => ({
+                  ...prev,
+                  photoUrl: updated.primaryProfilePhoto,
+                }));
+              }
+            }}
+          />
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Info Card */}
           <div className="lg:col-span-2 space-y-6">
             <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
@@ -420,6 +666,67 @@ export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) 
                 ))}
               </div>
             </div>
+
+            {/* Portfolio & Work Proof Quick Gallery */}
+            <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <div>
+                  <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
+                    <Camera className="w-5 h-5 text-emerald-600" />
+                    <span>Portfolio & Work Evidence ({portfolio.length})</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Photos of work, reference letters, and verified certificates</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setActiveTab("portfolio")}
+                    className="text-xs font-bold text-emerald-700 hover:text-emerald-800 underline"
+                  >
+                    View All
+                  </button>
+                  <button
+                    onClick={() => setIsAddPortfolioOpen(true)}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center space-x-1"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>Upload Proof</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {portfolio.slice(0, 4).map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => handleOpenPortfolioItem(item)}
+                    className="group relative cursor-pointer border border-slate-200 rounded-2xl overflow-hidden hover:border-emerald-500 transition-all bg-slate-50 flex flex-col"
+                  >
+                    <div className="h-28 w-full relative bg-slate-100 overflow-hidden">
+                      {item.fileType === "image" ? (
+                        <img
+                          src={item.url}
+                          alt={item.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-slate-100 text-slate-600 p-2 text-center">
+                          <FileText className="w-8 h-8 text-rose-500 mb-1" />
+                          <span className="text-[10px] font-bold text-slate-700 line-clamp-1">{item.title}</span>
+                          <span className="text-[9px] text-slate-400">PDF Document</span>
+                        </div>
+                      )}
+                      <div className="absolute top-1.5 right-1.5 bg-slate-900/80 backdrop-blur-xs text-white px-1.5 py-0.5 rounded text-[9px] font-bold">
+                        {item.fileType === "image" ? "Photo" : "PDF"}
+                      </div>
+                    </div>
+                    <div className="p-2.5 bg-white space-y-1">
+                      <div className="font-bold text-slate-800 text-[11px] truncate">{item.title}</div>
+                      <div className="text-[10px] text-emerald-700 font-semibold">{item.category}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Side Info Column */}
@@ -445,7 +752,7 @@ export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) 
                 </div>
 
                 <div className="flex items-center justify-between p-2 bg-slate-800/80 rounded-xl border border-slate-700">
-                  <span className="text-slate-300">ZRP Fingerprint Clearance</span>
+                  <span className="text-slate-300">Police Fingerprint Clearance</span>
                   <span className="text-emerald-400 font-bold flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" /> Cleared
                   </span>
@@ -480,6 +787,170 @@ export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) 
               </div>
             </div>
           </div>
+        </div>
+        </div>
+      )}
+
+      {/* TAB: PORTFOLIO & PROOF OF WORK */}
+      {activeTab === "portfolio" && (
+        <div className="space-y-6">
+          {/* Header & Controls */}
+          <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-[11px] font-extrabold uppercase rounded-md tracking-wider">
+                  Client-Facing Evidence
+                </span>
+                <span className="text-xs text-slate-400">• Visible on your public profile</span>
+              </div>
+              <h2 className="text-xl font-black text-slate-900 mt-1">Portfolio & Proof of Work</h2>
+              <p className="text-xs text-slate-500 max-w-2xl mt-0.5">
+                Upload work photos (cooking, deep cleaning, laundry ironing, childcare) and reference letters or certificates so prospective employers can understand your skills and hire you faster.
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-3 shrink-0">
+              {/* Category Filter Pills */}
+              <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 text-xs font-bold text-slate-600">
+                {(["All", "Photos", "Documents"] as const).map((filter) => (
+                  <button
+                    key={filter}
+                    onClick={() => setPortfolioFilter(filter)}
+                    className={`px-3 py-1.5 rounded-xl transition-all ${
+                      portfolioFilter === filter
+                        ? "bg-white text-emerald-800 shadow-sm"
+                        : "hover:text-slate-900"
+                    }`}
+                  >
+                    {filter}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => setIsAddPortfolioOpen(true)}
+                className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black shadow-md shadow-emerald-600/20 transition-all flex items-center space-x-1.5 shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Item / Letter</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Portfolio Grid */}
+          {filteredPortfolio.length === 0 ? (
+            <div className="bg-white border-2 border-dashed border-slate-200 rounded-3xl p-12 text-center space-y-3">
+              <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto">
+                <Camera className="w-8 h-8" />
+              </div>
+              <h4 className="font-bold text-slate-800 text-sm">No items in this category yet</h4>
+              <p className="text-xs text-slate-500 max-w-md mx-auto">
+                Upload pictures of your work or reference letters to help prospective employers evaluate your experience.
+              </p>
+              <button
+                onClick={() => setIsAddPortfolioOpen(true)}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all inline-flex items-center space-x-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Upload First Item</span>
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+              {filteredPortfolio.map((item) => (
+                <div
+                  key={item.id}
+                  onClick={() => handleOpenPortfolioItem(item)}
+                  className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 group cursor-pointer flex flex-col justify-between border-b-4 hover:border-b-emerald-600"
+                >
+                  <div>
+                    {/* Media Display Header */}
+                    <div className="relative h-48 bg-slate-100 overflow-hidden">
+                      {item.fileType === "image" ? (
+                        <img
+                          src={item.url}
+                          alt={item.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-slate-50 to-slate-200 p-6 text-center">
+                          <FileText className="w-12 h-12 text-rose-500 mb-2 drop-shadow" />
+                          <span className="text-xs font-bold text-slate-700 line-clamp-1">{item.title}</span>
+                          <span className="text-[10px] text-slate-400 mt-1 uppercase font-mono tracking-wider">
+                            PDF Verification Document
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Badge Tags */}
+                      <div className="absolute top-3 left-3 flex flex-wrap gap-1">
+                        <span className="px-2.5 py-1 bg-slate-900/80 backdrop-blur-md text-white text-[10px] font-bold rounded-lg shadow-sm">
+                          {item.category}
+                        </span>
+                      </div>
+
+                      <div className="absolute top-3 right-3 flex items-center space-x-1">
+                        {item.isVerified && (
+                          <span className="px-2 py-0.5 bg-emerald-500 text-slate-950 text-[10px] font-black rounded shadow flex items-center gap-1">
+                            <ShieldCheck className="w-3 h-3" />
+                            VERIFIED
+                          </span>
+                        )}
+                        <button
+                          onClick={(e) => handleDeletePortfolioItem(item.id, e)}
+                          title="Delete Item"
+                          className="p-1.5 bg-slate-900/70 hover:bg-rose-600 text-white rounded-lg transition-colors backdrop-blur-xs"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+
+                      <div className="absolute inset-0 bg-emerald-950/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="px-3 py-1.5 bg-white text-slate-900 font-bold text-xs rounded-xl shadow-lg flex items-center space-x-1">
+                          <Eye className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>Click to Inspect</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Content Body */}
+                    <div className="p-5 space-y-2.5">
+                      <h4 className="font-bold text-slate-900 text-sm leading-snug group-hover:text-emerald-700 transition-colors">
+                        {item.title}
+                      </h4>
+
+                      {item.description && (
+                        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed font-normal">
+                          {item.description}
+                        </p>
+                      )}
+
+                      {item.issuerOrEmployer && (
+                        <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                          <div className="text-[10px] text-slate-500 uppercase font-bold">Issuer / Employer</div>
+                          <div className="text-xs font-semibold text-slate-800">{item.issuerOrEmployer}</div>
+                          {item.rating && (
+                            <div className="flex items-center space-x-1 pt-0.5">
+                              {[...Array(item.rating)].map((_, i) => (
+                                <Star key={i} className="w-3 h-3 fill-amber-400 text-amber-400" />
+                              ))}
+                              <span className="text-[10px] font-bold text-slate-600 ml-1">5-Star Recommendation</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Card Footer */}
+                  <div className="px-5 py-3 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+                    <span>Uploaded {item.uploadedAt}</span>
+                    <span className="font-mono">{item.fileSize || "1.2 MB"}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -630,27 +1101,29 @@ export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) 
         </div>
       )}
 
-      {/* TAB 4: ZRP POLICE & VETTING */}
+      {/* TAB 4: VERIFIED BACKGROUND & VETTING */}
       {activeTab === "verification" && (
         <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm space-y-6">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
             <div>
               <h3 className="font-extrabold text-slate-900 text-lg flex items-center gap-2">
                 <ShieldCheck className="w-6 h-6 text-emerald-600" />
-                <span>ZRP Police Fingerprint Clearance & Vetting Center</span>
+                <span>Candidate Background Clearance & Verification Audit</span>
               </h3>
-              <p className="text-xs text-slate-500">Official Zimbabwe Republic Police Fingerprint Form Clearance & ID Audit</p>
+              <p className="text-xs text-slate-500">Official National Criminal Records Clearance & Biometric ID Audit</p>
             </div>
             <span className="px-3 py-1 bg-emerald-500 text-slate-950 font-black text-xs rounded-full">
               STATUS: PASSED & VERIFIED
             </span>
           </div>
 
+          <VerifiedBadge size="badge-card" subtext={`Clearance Serial #${workerProfile.policeClearanceNo} • Verified Candidate Certificate`} />
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-2xl space-y-1">
               <div className="text-[11px] text-emerald-800 font-semibold uppercase">Clearance Form Serial</div>
               <div className="text-base font-mono font-bold text-emerald-950">{workerProfile.policeClearanceNo}</div>
-              <div className="text-[10px] text-slate-500">ZRP CID Headquarters Audit</div>
+              <div className="text-[10px] text-slate-500">CID Headquarters Records Audit</div>
             </div>
 
             <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-2xl space-y-1">
@@ -660,12 +1133,12 @@ export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) 
             </div>
 
             <div className="p-4 bg-emerald-50/60 border border-emerald-200 rounded-2xl space-y-1">
-              <div className="text-[11px] text-emerald-800 font-semibold uppercase">Fingerprint Status</div>
+              <div className="text-[11px] text-emerald-800 font-semibold uppercase">Background Status</div>
               <div className="text-base font-bold text-emerald-900 flex items-center gap-1">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600" />
                 <span>NO CRIMINAL RECORD</span>
               </div>
-              <div className="text-[10px] text-slate-500">National Automated Fingerprint System (NAFIS)</div>
+              <div className="text-[10px] text-slate-500">National Automated Fingerprint Clearance (NAFIS)</div>
             </div>
           </div>
         </div>
@@ -845,172 +1318,103 @@ export const WorkerModule: React.FC<WorkerModuleProps> = ({ currency = "USD" }) 
         </div>
       )}
 
-      {/* REGISTRATION MODAL */}
-      {showRegModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4 border border-slate-200">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-extrabold text-slate-900 text-base flex items-center gap-2">
-                <User className="w-5 h-5 text-emerald-600" />
-                <span>Worker Registration Portal</span>
-              </h3>
-              <button onClick={() => setShowRegModal(false)} className="p-1 text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {/* TAB: WIZARD REGISTRATION */}
+      {activeTab === "wizard-registration" && (
+        <div className="space-y-4">
+          <WorkerRegistrationWizard
+            onComplete={(reg: StandardizedWorkerRegistration) => {
+              setWorkerProfile((prev) => ({
+                ...prev,
+                name: reg.fullName || prev.name,
+                phone: reg.phoneNumber || prev.phone,
+                nationalId: reg.nationalId || prev.nationalId,
+                role: reg.jobCategories?.[0] || prev.role,
+                city: `${reg.city} (${reg.preferredWorkLocation || reg.province})`,
+                rateUSD: reg.expectedMonthlySalaryUSD || prev.rateUSD,
+                bio: reg.bio || prev.bio,
+              }));
+              setSuccessBanner(`Profile for ${reg.fullName} submitted successfully to the Admin Approval Queue.`);
+              setActiveTab("profile");
+            }}
+          />
+        </div>
+      )}
 
-            {regSuccess ? (
-              <div className="py-6 text-center space-y-3">
-                <div className="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">
-                  <CheckCircle2 className="w-6 h-6" />
-                </div>
-                <h4 className="font-bold text-slate-900 text-sm">Registration Submitted!</h4>
-                <p className="text-xs text-slate-600">
-                  Your profile has been created and queued for ZRP Police clearance verification.
-                </p>
-                <button
-                  onClick={() => {
-                    setRegSuccess(false);
-                    setShowRegModal(false);
-                  }}
-                  className="px-4 py-2 bg-emerald-600 text-white font-bold text-xs rounded-xl"
-                >
-                  Close & View Profile
-                </button>
-              </div>
-            ) : (
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
+      {/* WIZARD MODAL */}
+      {showWizardModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[92vh] overflow-y-auto p-6 shadow-2xl relative border border-slate-200">
+            <button
+              onClick={() => setShowWizardModal(false)}
+              className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-full z-10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="pt-2">
+              <WorkerRegistrationWizard
+                onComplete={(reg: StandardizedWorkerRegistration) => {
                   setWorkerProfile((prev) => ({
                     ...prev,
-                    name: regData.fullName || prev.name,
-                    phone: regData.phone || prev.phone,
-                    nationalId: regData.nationalId || prev.nationalId,
-                    role: regData.role,
-                    city: regData.city,
-                    rateUSD: Number(regData.rateUSD),
+                    name: reg.fullName || prev.name,
+                    phone: reg.phoneNumber || prev.phone,
+                    nationalId: reg.nationalId || prev.nationalId,
+                    role: reg.jobCategories?.[0] || prev.role,
+                    city: `${reg.city} (${reg.preferredWorkLocation || reg.province})`,
+                    rateUSD: reg.expectedMonthlySalaryUSD || prev.rateUSD,
+                    bio: reg.bio || prev.bio,
                   }));
-                  setRegSuccess(true);
+                  setShowWizardModal(false);
+                  setSuccessBanner(`Standard registration for ${reg.fullName} submitted to Admin Approval Queue!`);
                 }}
-                className="space-y-3 text-xs"
-              >
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Tendai Musika"
-                    value={regData.fullName}
-                    onChange={(e) => setRegData({ ...regData, fullName: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">National ID</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="63-289410-F-42"
-                      value={regData.nationalId}
-                      onChange={(e) => setRegData({ ...regData, nationalId: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Mobile (+263)</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="+263 771 000 000"
-                      value={regData.phone}
-                      onChange={(e) => setRegData({ ...regData, phone: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Primary Role</label>
-                    <select
-                      value={regData.role}
-                      onChange={(e) => setRegData({ ...regData, role: e.target.value })}
-                      className="w-full px-2.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    >
-                      <option value="Domestic worker">Domestic worker</option>
-                      <option value="Maid">Maid</option>
-                      <option value="Part-time maid">Part-time maid</option>
-                      <option value="Nanny">Nanny</option>
-                      <option value="Caregiver">Caregiver</option>
-                      <option value="Housekeeper">Housekeeper</option>
-                      <option value="Gardener">Gardener</option>
-                      <option value="Driver">Driver</option>
-                      <option value="Chef">Chef</option>
-                      <option value="Electrician">Electrician</option>
-                      <option value="Plumber">Plumber</option>
-                      <option value="Nurse aide">Nurse aide</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Location City</label>
-                    <select
-                      value={regData.city}
-                      onChange={(e) => {
-                        const newCity = e.target.value;
-                        const subs = getSuburbsForCity(newCity);
-                        setRegData({
-                          ...regData,
-                          city: newCity,
-                          suburb: subs.length > 1 ? subs[1] : subs[0]
-                        });
-                      }}
-                      className="w-full px-2.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    >
-                      {ALL_ZIMBABWE_CITIES.map((c) => (
-                        <option key={c} value={c}>{c}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="font-bold text-slate-700 block mb-1">Major Suburb</label>
-                    <select
-                      value={regData.suburb}
-                      onChange={(e) => setRegData({ ...regData, suburb: e.target.value })}
-                      className="w-full px-2.5 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    >
-                      {getSuburbsForCity(regData.city).map((sub) => (
-                        <option key={sub} value={sub}>{sub}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="font-bold text-slate-700 block mb-1">Monthly Expected Rate ($ USD)</label>
-                  <input
-                    type="number"
-                    value={regData.rateUSD}
-                    onChange={(e) => setRegData({ ...regData, rateUSD: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all"
-                >
-                  Complete Registration & Submit
-                </button>
-              </form>
-            )}
+              />
+            </div>
           </div>
         </div>
       )}
+
+      {/* WHATSAPP PROFILE IMPORT MODAL */}
+      {showWhatsAppModal && (
+        <WhatsAppProfileImportModal
+          isOpen={showWhatsAppModal}
+          onClose={() => setShowWhatsAppModal(false)}
+          onImportComplete={(importedWorker: StandardizedWorkerRegistration) => {
+            setWorkerProfile((prev) => ({
+              ...prev,
+              name: importedWorker.fullName || prev.name,
+              phone: importedWorker.phoneNumber || prev.phone,
+              nationalId: importedWorker.nationalId || prev.nationalId,
+              role: importedWorker.jobCategories?.[0] || prev.role,
+              city: `${importedWorker.city} (${importedWorker.preferredWorkLocation || importedWorker.province})`,
+              rateUSD: importedWorker.expectedMonthlySalaryUSD || prev.rateUSD,
+              bio: importedWorker.bio || prev.bio,
+            }));
+            if (importedWorker.portfolio && importedWorker.portfolio.length > 0) {
+              setPortfolio((prev) => [...importedWorker.portfolio!, ...prev]);
+            }
+            setShowWhatsAppModal(false);
+            setSuccessBanner(`WhatsApp candidate ${importedWorker.fullName} (with ${importedWorker.portfolio?.length || 0} media/docs) successfully parsed and added!`);
+          }}
+        />
+      )}
+
+      {/* PORTFOLIO LIGHTBOX VIEWER */}
+      {selectedPortfolioItem && (
+        <PortfolioViewerModal
+          isOpen={isPortfolioViewerOpen}
+          onClose={() => {
+            setIsPortfolioViewerOpen(false);
+            setSelectedPortfolioItem(null);
+          }}
+          item={selectedPortfolioItem}
+        />
+      )}
+
+      {/* ADD / UPLOAD PORTFOLIO ITEM MODAL */}
+      <AddPortfolioItemModal
+        isOpen={isAddPortfolioOpen}
+        onClose={() => setIsAddPortfolioOpen(false)}
+        onAddItem={handleAddPortfolioItem}
+      />
     </div>
   );
 };
