@@ -303,9 +303,22 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
                         {worker.suburb}, {worker.city}
                       </span>
                     </span>
-                    <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md">
-                      {worker.availability}
-                    </span>
+                    {(() => {
+                      const status = (worker.availabilityStatus || worker.availability || "Available immediately") as string;
+                      let badgeClass = "bg-emerald-50 text-emerald-700 border-emerald-200/80";
+                      if (status === "Available from a future date" || status === "available_future_date") {
+                        badgeClass = "bg-blue-50 text-blue-700 border-blue-200/80";
+                      } else if (status === "Already employed" || status === "already_employed") {
+                        badgeClass = "bg-slate-100 text-slate-600 border-slate-200";
+                      } else if (status === "Temporarily unavailable" || status === "temporarily_unavailable") {
+                        badgeClass = "bg-amber-50 text-amber-700 border-amber-200/80";
+                      }
+                      return (
+                        <span className={`font-semibold text-[11px] px-2 py-0.5 rounded-md border ${badgeClass}`}>
+                          {status}
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   {/* Bio */}

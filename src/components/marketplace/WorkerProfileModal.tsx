@@ -25,13 +25,17 @@ import {
   CheckCircle2,
   Building,
   Image as ImageIcon,
-  Layers
+  Layers,
+  Calendar,
+  FolderLock
 } from "lucide-react";
 import { PortfolioViewerModal } from "./PortfolioViewerModal";
 import { AddPortfolioItemModal } from "./AddPortfolioItemModal";
 import { ProfileCompletenessWidget } from "../common/ProfileCompletenessWidget";
 import { CandidatePhotoGallery } from "./CandidatePhotoGallery";
 import { VerifiedBadge } from "../common/VerifiedBadge";
+import { WorkerAvailabilityCalendarModal } from "../worker/WorkerAvailabilityCalendarModal";
+import { DocumentVaultModal } from "../common/DocumentVaultModal";
 
 interface WorkerProfileModalProps {
   worker: WorkerProfile | null;
@@ -58,6 +62,8 @@ export const WorkerProfileModal: React.FC<WorkerProfileModalProps> = ({
   const [selectedPortfolioItem, setSelectedPortfolioItem] = useState<PortfolioItem | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState<boolean>(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState<boolean>(false);
+  const [isDocumentVaultModalOpen, setIsDocumentVaultModalOpen] = useState<boolean>(false);
   const [portfolioFilter, setPortfolioFilter] = useState<"All" | "Photos" | "Documents">("All");
 
   if (!worker) return null;
@@ -463,19 +469,44 @@ export const WorkerProfileModal: React.FC<WorkerProfileModalProps> = ({
               </div>
             </div>
 
-            {/* Rate & Availability Box */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                  Agreed Monthly Rate
-                </span>
-                <span className="text-lg font-bold text-slate-900">{rateDisplay}</span>
+            {/* Rate & Availability Box with Live Calendar and Document Vault Actions */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Agreed Monthly Rate
+                  </span>
+                  <span className="text-lg font-bold text-slate-900">{rateDisplay}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsDocumentVaultModalOpen(true)}
+                  className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+                  title="View / Upload ID, Police Clearance, and Employment Contracts"
+                >
+                  <FolderLock className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Docs Vault</span>
+                </button>
               </div>
-              <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl">
-                <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
-                  Availability
-                </span>
-                <span className="text-sm font-bold text-emerald-700">{worker.availability}</span>
+
+              <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-2xl flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block">
+                    Availability Status
+                  </span>
+                  <span className="text-xs font-bold text-emerald-700 block mt-0.5">
+                    {worker.availabilityStatus || worker.availability || "Available Immediately"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAvailabilityModalOpen(true)}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all"
+                  title="View / Edit availability schedule and notice period"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>Calendar</span>
+                </button>
               </div>
             </div>
 
@@ -582,6 +613,32 @@ export const WorkerProfileModal: React.FC<WorkerProfileModalProps> = ({
         onClose={() => setIsAddModalOpen(false)}
         onAddItem={handleAddPortfolioItem}
         workerName={worker.fullName}
+      />
+
+      {/* Worker Availability Calendar Modal */}
+      <WorkerAvailabilityCalendarModal
+        isOpen={isAvailabilityModalOpen}
+        onClose={() => setIsAvailabilityModalOpen(false)}
+        worker={worker}
+        onSaveAvailability={(updatedStatus, schedule, noticePeriod) => {
+          if (onUpdateWorker) {
+            onUpdateWorker({
+              ...worker,
+              availabilityStatus: updatedStatus,
+              availability: updatedStatus,
+              availabilitySchedule: schedule,
+              noticePeriod,
+            });
+          }
+        }}
+      />
+
+      {/* Secure Document Vault & Contract Storage Modal */}
+      <DocumentVaultModal
+        isOpen={isDocumentVaultModalOpen}
+        onClose={() => setIsDocumentVaultModalOpen(false)}
+        workerName={worker.fullName}
+        workerRole={worker.role}
       />
     </>
   );

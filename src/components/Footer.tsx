@@ -15,7 +15,17 @@ import {
   Heart
 } from "lucide-react";
 
-export const Footer: React.FC = () => {
+interface FooterProps {
+  onOpenLegalCompliance?: (tab?: "privacy" | "terms" | "placement" | "guidelines" | "cookies" | "deletion") => void;
+  onOpenAccessibility?: () => void;
+  onOpenMarketingHub?: () => void;
+}
+
+export const Footer: React.FC<FooterProps> = ({
+  onOpenLegalCompliance,
+  onOpenAccessibility,
+  onOpenMarketingHub,
+}) => {
   return (
     <footer className="bg-slate-950 text-slate-300 border-t border-emerald-900/60 text-xs py-10 pb-24 xl:pb-10 px-4 sm:px-6 relative overflow-hidden">
       {/* Subtle Glow Elements */}
@@ -192,10 +202,76 @@ export const Footer: React.FC = () => {
           </div>
         </div>
 
+        {/* Legal, Statutory Compliance & Accessibility Links */}
+        <div className="pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-slate-400 font-medium">
+            <button
+              onClick={() => onOpenLegalCompliance && onOpenLegalCompliance("privacy")}
+              className="hover:text-emerald-400 transition-colors"
+            >
+              Privacy Policy
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => onOpenLegalCompliance && onOpenLegalCompliance("terms")}
+              className="hover:text-emerald-400 transition-colors"
+            >
+              Terms & Conditions
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => onOpenLegalCompliance && onOpenLegalCompliance("placement")}
+              className="hover:text-emerald-400 transition-colors"
+            >
+              Placement Fee Agreement
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => onOpenLegalCompliance && onOpenLegalCompliance("guidelines")}
+              className="hover:text-emerald-400 transition-colors"
+            >
+              Community Guidelines
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => onOpenLegalCompliance && onOpenLegalCompliance("cookies")}
+              className="hover:text-emerald-400 transition-colors"
+            >
+              Cookie Policy
+            </button>
+            <span>•</span>
+            <button
+              onClick={() => onOpenLegalCompliance && onOpenLegalCompliance("deletion")}
+              className="text-rose-400 hover:text-rose-300 transition-colors font-semibold"
+            >
+              Data Deletion Request
+            </button>
+          </div>
+
+          <div className="flex items-center space-x-3">
+            {onOpenAccessibility && (
+              <button
+                onClick={onOpenAccessibility}
+                className="px-3 py-1 bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-300 hover:text-white rounded-lg text-xs font-semibold transition-colors"
+              >
+                ♿ Accessibility & Speed
+              </button>
+            )}
+            {onOpenMarketingHub && (
+              <button
+                onClick={onOpenMarketingHub}
+                className="px-3 py-1 bg-emerald-950 hover:bg-emerald-900 border border-emerald-500/40 text-emerald-300 hover:text-white rounded-lg text-xs font-semibold transition-colors"
+              >
+                ✨ Marketing & FAQs
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Bottom Row: Copyright & Disclaimers */}
         <div className="flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 pt-2 gap-2 text-center sm:text-left">
           <div>
-            © 2026 Zimbabwe Maids Centre Enterprise Platform. All rights reserved.
+            © 2026 Zimbabwe Maids Centre Enterprise Platform. Regulated under Zimbabwe Cyber & Data Protection Act [Chapter 12:07].
           </div>
           <div className="flex items-center space-x-4 text-slate-400">
             <span>Free Worker Profiles</span>

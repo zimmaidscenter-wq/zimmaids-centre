@@ -24,8 +24,8 @@ import { UserRole, CityLocation } from "../types/marketplace";
 import { ALL_ZIMBABWE_CITIES } from "../data/zimbabweLocations";
 
 interface MobileBottomNavProps {
-  activeTab: "landing" | "architecture" | "marketplace" | "worker" | "jobs" | "search" | "whatsapp" | "whatsapp-upload" | "ai-studio" | "payments" | "admin" | "reviews" | "reports";
-  setActiveTab: (tab: "landing" | "architecture" | "marketplace" | "worker" | "jobs" | "search" | "whatsapp" | "whatsapp-upload" | "ai-studio" | "payments" | "admin" | "reviews" | "reports") => void;
+  activeTab: "landing" | "architecture" | "employer" | "maid" | "marketplace" | "worker" | "jobs" | "search" | "whatsapp" | "whatsapp-upload" | "ai-studio" | "payments" | "admin" | "reviews" | "reports";
+  setActiveTab: (tab: any) => void;
   selectedRole: UserRole;
   setSelectedRole: (role: UserRole) => void;
   selectedCity: CityLocation;

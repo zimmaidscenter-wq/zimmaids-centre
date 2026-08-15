@@ -23,6 +23,7 @@ import {
   ShieldAlert,
   CheckCircle2,
   Gift,
+  Bell,
 } from "lucide-react";
 import { UserRole, CityLocation } from "../types/marketplace";
 import { ALL_ZIMBABWE_CITIES } from "../data/zimbabweLocations";
@@ -40,6 +41,10 @@ interface HeaderProps {
   setCurrency: (c: "USD" | "ZWG") => void;
   onOpenAgencyRegister?: () => void;
   onOpenReferralProgram?: () => void;
+  onOpenNotifications?: () => void;
+  onOpenLegalCompliance?: (tab?: any) => void;
+  onOpenAccessibility?: () => void;
+  onOpenMarketingHub?: () => void;
 }
 
 const ALL_ROLES: UserRole[] = [
@@ -96,6 +101,10 @@ export const Header: React.FC<HeaderProps> = ({
   setCurrency,
   onOpenAgencyRegister,
   onOpenReferralProgram,
+  onOpenNotifications,
+  onOpenLegalCompliance,
+  onOpenAccessibility,
+  onOpenMarketingHub,
 }) => {
   const { currentUser, setIsAuthModalOpen, setAuthModalTab, logout, switchDemoUser } = useAuth();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -208,106 +217,73 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         {/* Navigation Tabs Filtered by User Role */}
-        <nav className="hidden md:flex items-center space-x-1 bg-emerald-900/50 p-1 rounded-xl border border-emerald-800/60 overflow-x-auto max-w-2xl">
+        <nav className="hidden md:flex items-center space-x-1 bg-emerald-900/50 p-1 rounded-xl border border-emerald-800/60 overflow-x-auto max-w-3xl">
+          {/* Employer Dashboard */}
           <button
-            onClick={() => setActiveTab("landing")}
+            onClick={() => setActiveTab("employer" as any)}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "landing"
-                ? "bg-amber-400 text-slate-950 font-bold shadow-md"
+              activeTab === "employer" || activeTab === "jobs"
+                ? "bg-emerald-500 text-slate-950 shadow-md font-black"
+                : "text-emerald-200 hover:bg-emerald-800/50 hover:text-white"
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Employer Portal</span>
+          </button>
+
+          {/* Maid / Worker Dashboard */}
+          <button
+            onClick={() => setActiveTab("maid" as any)}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+              activeTab === "maid" || activeTab === "worker"
+                ? "bg-emerald-500 text-slate-950 shadow-md font-black"
+                : "text-emerald-200 hover:bg-emerald-800/50 hover:text-white"
+            }`}
+          >
+            <UserCheck className="w-3.5 h-3.5" />
+            <span>Maid / Worker Portal</span>
+          </button>
+
+          {/* Admin Dashboard */}
+          <button
+            onClick={() => setActiveTab("admin")}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+              activeTab === "admin"
+                ? "bg-amber-400 text-slate-950 shadow-md font-black"
                 : "text-amber-200 hover:bg-emerald-800/50 hover:text-white"
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5 text-slate-950" />
-            <span>Showcase</span>
+            <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
+            <span>Admin Center</span>
           </button>
 
-          {/* Client & Admin Relevant: Service Directory */}
-          {(currentUser?.role === "Admin" || currentUser?.role === "Employer" || !currentUser) && (
-            <button
-              onClick={() => setActiveTab("marketplace")}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-                activeTab === "marketplace"
-                  ? "bg-emerald-500 text-slate-950 shadow-md font-extrabold"
-                  : "text-emerald-200 hover:bg-emerald-800/50 hover:text-white"
-              }`}
-            >
-              <Building2 className="w-3.5 h-3.5" />
-              <span>Staff Directory</span>
-            </button>
-          )}
-
-          {/* Worker & Admin Relevant: Worker Portal */}
-          {(currentUser?.role === "Admin" || currentUser?.role === "Worker" || !currentUser) && (
-            <button
-              onClick={() => setActiveTab("worker")}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-                activeTab === "worker"
-                  ? "bg-emerald-500 text-slate-950 shadow-md font-extrabold"
-                  : "text-emerald-200 hover:bg-emerald-800/50 hover:text-white"
-              }`}
-            >
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>Employee Portal</span>
-            </button>
-          )}
-
-          {/* Placement Agency Portal */}
-          {(currentUser?.role === "Admin" || currentUser?.role === "Agency" || !currentUser) && (
-            <button
-              onClick={() => setActiveTab("agency")}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-                activeTab === "agency"
-                  ? "bg-teal-400 text-slate-950 shadow-md font-black"
-                  : "text-teal-200 hover:bg-emerald-800/50 hover:text-white"
-              }`}
-            >
-              <Building2 className="w-3.5 h-3.5 text-teal-300" />
-              <span>Agencies</span>
-            </button>
-          )}
-
-          {/* Job Hub (All roles, adapted internally) */}
+          {/* Staff Directory */}
           <button
-            onClick={() => setActiveTab("jobs")}
+            onClick={() => setActiveTab("marketplace")}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "jobs"
+              activeTab === "marketplace"
                 ? "bg-emerald-500 text-slate-950 shadow-md font-extrabold"
                 : "text-emerald-200 hover:bg-emerald-800/50 hover:text-white"
             }`}
           >
-            <Briefcase className="w-3.5 h-3.5 text-amber-300" />
-            <span>Job Hub</span>
+            <Users className="w-3.5 h-3.5" />
+            <span>Directory</span>
           </button>
 
-          {/* Search Engine */}
+          {/* WhatsApp Ingestion */}
           <button
-            onClick={() => setActiveTab("search")}
+            onClick={() => setActiveTab("whatsapp-upload")}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "search"
-                ? "bg-emerald-500 text-slate-950 shadow-md"
-                : "text-emerald-200 hover:bg-emerald-800/50 hover:text-white"
+              activeTab === "whatsapp-upload"
+                ? "bg-amber-400 text-slate-950 shadow-md font-bold"
+                : "text-amber-200 hover:bg-emerald-800/50 hover:text-white"
             }`}
           >
-            <Search className="w-3.5 h-3.5 text-emerald-300" />
-            <span>Search</span>
+            <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
+            <span>WhatsApp Ingest</span>
           </button>
 
-          {/* WhatsApp Ingestion Portal */}
-          {(currentUser?.role === "Admin" || currentUser?.role === "Employer") && (
-            <button
-              onClick={() => setActiveTab("whatsapp-upload")}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-                activeTab === "whatsapp-upload"
-                  ? "bg-amber-400 text-slate-950 shadow-md font-bold"
-                  : "text-amber-200 hover:bg-emerald-800/50 hover:text-white"
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-500 fill-amber-500" />
-              <span>WhatsApp Ingestion</span>
-            </button>
-          )}
-
-          {/* Escrow Ledger & Payments */}
+          {/* Payments & Paynow */}
           <button
             onClick={() => setActiveTab("payments")}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
@@ -317,27 +293,38 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <CreditCard className="w-3.5 h-3.5" />
-            <span>Payments</span>
+            <span>Paynow Ledger</span>
           </button>
-
-          {/* Admin Center ONLY for Admin */}
-          {currentUser?.role === "Admin" && (
-            <button
-              onClick={() => setActiveTab("admin")}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-                activeTab === "admin"
-                  ? "bg-amber-400 text-slate-950 shadow-md font-black"
-                  : "bg-amber-400/20 text-amber-300 hover:bg-amber-400 hover:text-slate-950"
-              }`}
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              <span>Admin</span>
-            </button>
-          )}
         </nav>
 
-        {/* RIGHT SIDE: Dedicated Sign In, Referral Program & User Portal */}
+        {/* RIGHT SIDE: Dedicated Sign In, Referral Program, Notifications & User Portal */}
         <div className="flex items-center space-x-2 shrink-0">
+          {/* Notification Center Trigger */}
+          {onOpenNotifications && (
+            <button
+              onClick={onOpenNotifications}
+              className="relative p-2 bg-emerald-900/80 hover:bg-emerald-800 border border-emerald-600/50 rounded-xl text-emerald-300 hover:text-white transition-all shadow-sm active:scale-95"
+              title="View Notifications & Live Alerts"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-400 text-slate-950 text-[9px] font-black rounded-full flex items-center justify-center border border-emerald-950">
+                3
+              </span>
+            </button>
+          )}
+
+          {/* Marketing & Knowledge Hub Trigger */}
+          {onOpenMarketingHub && (
+            <button
+              onClick={onOpenMarketingHub}
+              className="hidden lg:flex items-center space-x-1.5 px-3 py-1.5 bg-emerald-900/80 hover:bg-emerald-800 border border-emerald-600/40 text-emerald-200 hover:text-white text-xs font-bold rounded-xl transition-all shadow-sm"
+              title="Featured workers, Blog tips, and FAQs"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+              <span>Marketing Hub</span>
+            </button>
+          )}
+
           {onOpenReferralProgram && (
             <button
               onClick={onOpenReferralProgram}
@@ -394,7 +381,7 @@ export const Header: React.FC<HeaderProps> = ({
                       </button>
                     )}
 
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Switch View Demo</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Switch Account Area</p>
                     <button
                       onClick={() => {
                         switchDemoUser("Admin");
@@ -403,7 +390,7 @@ export const Header: React.FC<HeaderProps> = ({
                       }}
                       className="w-full text-left px-2.5 py-1.5 hover:bg-slate-800 rounded-lg text-[11px] font-bold text-amber-300 flex items-center justify-between"
                     >
-                      <span>👑 Master Admin View</span>
+                      <span>👑 Administrator Dashboard</span>
                       <ShieldCheck className="w-3 h-3 text-amber-400" />
                     </button>
 
@@ -411,11 +398,11 @@ export const Header: React.FC<HeaderProps> = ({
                       onClick={() => {
                         switchDemoUser("Employer");
                         setIsProfileMenuOpen(false);
-                        setActiveTab("marketplace");
+                        setActiveTab("employer" as any);
                       }}
                       className="w-full text-left px-2.5 py-1.5 hover:bg-slate-800 rounded-lg text-[11px] font-bold text-emerald-300 flex items-center justify-between"
                     >
-                      <span>🏠 Client / Employer View</span>
+                      <span>🏢 Employer Dashboard (Mrs. Chigumba)</span>
                       <Building2 className="w-3 h-3 text-emerald-400" />
                     </button>
 
@@ -423,11 +410,11 @@ export const Header: React.FC<HeaderProps> = ({
                       onClick={() => {
                         switchDemoUser("Worker");
                         setIsProfileMenuOpen(false);
-                        setActiveTab("worker");
+                        setActiveTab("maid" as any);
                       }}
                       className="w-full text-left px-2.5 py-1.5 hover:bg-slate-800 rounded-lg text-[11px] font-bold text-sky-300 flex items-center justify-between"
                     >
-                      <span>🧹 Employee / Worker View</span>
+                      <span>🧹 Maid / Worker Dashboard (Sizani)</span>
                       <UserCheck className="w-3 h-3 text-sky-400" />
                     </button>
 

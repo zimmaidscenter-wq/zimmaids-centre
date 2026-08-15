@@ -168,6 +168,102 @@ export interface WorkerProfile {
   address?: string;
   isRestricted?: boolean;
   restrictionReason?: string;
+  // Enhanced Availability Status
+  availabilityStatus?: "available_immediately" | "available_future_date" | "already_employed" | "temporarily_unavailable";
+  availableFromDate?: string;
+  availabilitySchedule?: {
+    monday: boolean;
+    tuesday: boolean;
+    wednesday: boolean;
+    thursday: boolean;
+    friday: boolean;
+    saturday: boolean;
+    sunday: boolean;
+  };
+  noticePeriod?: "Immediate" | "1 Week Notice" | "2 Weeks Notice" | "1 Month Notice";
+}
+
+export type AvailabilityStatusType =
+  | "available_immediately"
+  | "available_future_date"
+  | "already_employed"
+  | "temporarily_unavailable";
+
+export interface VaultDocument {
+  id: string;
+  type: "National ID" | "Certificate" | "Police Clearance" | "Medical Certificate" | "Reference Letter" | "Employment Contract";
+  title: string;
+  issuerOrAuthority: string;
+  dateIssued: string;
+  expiryDate?: string;
+  verificationStatus: "Verified" | "Pending Review" | "Expired" | "Self-Uploaded";
+  documentUrl: string;
+  fileSize: string;
+  fileType: "pdf" | "image";
+  notes?: string;
+  isEncrypted: boolean;
+  // Contract specific fields
+  contractDetails?: {
+    employerName: string;
+    workerName: string;
+    agreedSalaryUSD: number;
+    startDate: string;
+    workType: "Live-In" | "Day Worker" | "Part-Time";
+    offDays: string;
+    signedByWorker: boolean;
+    signedByEmployer: boolean;
+    signedDate?: string;
+  };
+}
+
+export interface AppNotification {
+  id: string;
+  category: "jobs" | "applications" | "interviews" | "messages" | "verifications" | "subscriptions" | "placement_fees";
+  title: string;
+  message: string;
+  timestamp: string;
+  isRead: boolean;
+  actionUrl?: string;
+  metadata?: {
+    jobId?: string;
+    workerId?: string;
+    employerName?: string;
+    amountUSD?: number;
+    status?: string;
+  };
+}
+
+export interface BiDirectionalReview {
+  id: string;
+  authorType: "Employer" | "Worker";
+  authorName: string;
+  authorLocation: string;
+  targetName: string;
+  targetRole: string;
+  rating: number;
+  placementDate: string;
+  verifiedPlacement: boolean;
+  detailedRatings: {
+    punctualityOrFairness: number;
+    honestyOrPayTimeliness: number;
+    skillOrScopeClarity: number;
+    hygieneOrSafeEnvironment: number;
+  };
+  reviewText: string;
+  createdAt: string;
+  helpfulCount: number;
+  status: "Published" | "Under Moderation" | "Disputed";
+}
+
+export interface DataDeletionTicket {
+  id: string;
+  fullName: string;
+  phoneOrEmail: string;
+  nationalIdNumber: string;
+  reason: string;
+  submittedAt: string;
+  status: "Received" | "Under Review" | "Data Purged" | "Rejected";
+  targetUserRole: UserRole;
 }
 
 export type HelperType = "Live-In" | "Live-Out/Day Worker";

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { AuthProvider } from "./context/AuthContext";
+import { PlatformProvider } from "./context/PlatformContext";
 import { AuthModal } from "./components/auth/AuthModal";
 import { Header } from "./components/Header";
 import { MobileBottomNav } from "./components/MobileBottomNav";
@@ -10,6 +11,9 @@ import { WorkerDirectory } from "./components/marketplace/WorkerDirectory";
 import { AIVettingStudio } from "./components/marketplace/AIVettingStudio";
 import { PaymentsLedger } from "./components/marketplace/PaymentsLedger";
 import { AdminDashboard } from "./components/admin/AdminDashboard";
+import { PlatformAdminDashboard } from "./components/admin/PlatformAdminDashboard";
+import { EmployerDashboard } from "./components/employer/EmployerDashboard";
+import { MaidDashboard } from "./components/maid/MaidDashboard";
 import { WorkerModule } from "./components/worker/WorkerModule";
 import { JobManagementModule } from "./components/jobs/JobManagementModule";
 import { EnterpriseSearchEngine } from "./components/search/EnterpriseSearchEngine";
@@ -24,12 +28,16 @@ import { ChatModal } from "./components/marketplace/ChatModal";
 import { WhatsAppHelpWidget } from "./components/WhatsAppHelpWidget";
 import { ReviewAndTrustCenter } from "./components/marketplace/ReviewAndTrustCenter";
 import { PerformanceReportsModule } from "./components/admin/PerformanceReportsModule";
+import { NotificationCenterModal } from "./components/common/NotificationCenterModal";
+import { LegalComplianceModal } from "./components/common/LegalComplianceModal";
+import { AccessibilitySettingsModal } from "./components/common/AccessibilitySettingsModal";
+import { MarketingHubModal } from "./components/marketing/MarketingHubModal";
 import { UserRole, CityLocation, WorkerProfile, PlacementFeeRecord } from "./types/marketplace";
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<
-    "landing" | "architecture" | "marketplace" | "worker" | "agency" | "jobs" | "search" | "whatsapp" | "whatsapp-upload" | "ai-studio" | "payments" | "admin" | "reviews" | "reports"
-  >("landing");
+    "landing" | "architecture" | "employer" | "maid" | "marketplace" | "worker" | "agency" | "jobs" | "search" | "whatsapp" | "whatsapp-upload" | "ai-studio" | "payments" | "admin" | "reviews" | "reports"
+  >("employer");
 
   const [selectedRole, setSelectedRole] = useState<UserRole>("Domestic worker");
   const [selectedCity, setSelectedCity] = useState<CityLocation>("Harare");
@@ -44,6 +52,18 @@ export default function App() {
   const [chatWorker, setChatWorker] = useState<WorkerProfile | null>(null);
   const [placementRecords, setPlacementRecords] = useState<PlacementFeeRecord[]>([]);
 
+  // New Global Modals: Notifications, Legal, Accessibility, Marketing
+  const [isNotificationCenterOpen, setIsNotificationCenterOpen] = useState<boolean>(false);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState<boolean>(false);
+  const [legalInitialTab, setLegalInitialTab] = useState<"privacy" | "terms" | "placement" | "guidelines" | "cookies" | "deletion">("privacy");
+  const [isAccessibilityModalOpen, setIsAccessibilityModalOpen] = useState<boolean>(false);
+  const [isMarketingHubOpen, setIsMarketingHubOpen] = useState<boolean>(false);
+
+  const handleOpenLegal = (tab?: "privacy" | "terms" | "placement" | "guidelines" | "cookies" | "deletion") => {
+    if (tab) setLegalInitialTab(tab);
+    setIsLegalModalOpen(true);
+  };
+
   const handleRecordPlacementSuccess = (newRecord: PlacementFeeRecord) => {
     setPlacementRecords((prev) => [newRecord, ...prev]);
     setPlacementWorker(null);
@@ -57,73 +77,80 @@ export default function App() {
 
   return (
     <AuthProvider>
-      <div className="min-h-screen bg-slate-100 text-slate-900 font-sans selection:bg-emerald-500 selection:text-white flex flex-col justify-between">
-        <div>
-          {/* Navigation Bar */}
-          <Header
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            selectedRole={selectedRole}
-            setSelectedRole={setSelectedRole}
-            selectedCity={selectedCity}
-            setSelectedCity={setSelectedCity}
-            currency={currency}
-            setCurrency={setCurrency}
-            onOpenAgencyRegister={() => setIsAgencyRegistrationModalOpen(true)}
-            onOpenReferralProgram={() => setIsReferralModalOpen(true)}
-          />
+      <PlatformProvider>
+        <div className="min-h-screen bg-slate-100 text-slate-900 font-sans selection:bg-emerald-500 selection:text-white flex flex-col justify-between">
+          <div>
+            {/* Navigation Bar */}
+            <Header
+              activeTab={activeTab}
+              setActiveTab={setActiveTab}
+              selectedRole={selectedRole}
+              setSelectedRole={setSelectedRole}
+              selectedCity={selectedCity}
+              setSelectedCity={setSelectedCity}
+              currency={currency}
+              setCurrency={setCurrency}
+              onOpenAgencyRegister={() => setIsAgencyRegistrationModalOpen(true)}
+              onOpenReferralProgram={() => setIsReferralModalOpen(true)}
+              onOpenNotifications={() => setIsNotificationCenterOpen(true)}
+              onOpenLegalCompliance={handleOpenLegal}
+              onOpenAccessibility={() => setIsAccessibilityModalOpen(true)}
+              onOpenMarketingHub={() => setIsMarketingHubOpen(true)}
+            />
 
-          {/* View Switcher */}
-          <main className="pb-16">
-            {activeTab === "landing" && (
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-                <LandingShowcase onNavigateToTab={(tab) => setActiveTab(tab as any)} />
-              </div>
-            )}
-            {activeTab === "architecture" && <ArchitectureView />}
-            {activeTab === "marketplace" && (
-              <WorkerDirectory
-                selectedRole={selectedRole}
-                selectedCity={selectedCity}
-                currency={currency}
-                isPremiumEmployer={isPremiumEmployer}
-                onOpenPremiumModal={() => setIsPremiumModalOpen(true)}
-                onOpenHirePlacement={(w) => setPlacementWorker(w)}
-                onOpenChat={(w) => setChatWorker(w)}
-              />
-            )}
-            {activeTab === "worker" && <WorkerModule currency={currency} />}
-            {activeTab === "agency" && (
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-                <AgencyDashboard />
-              </div>
-            )}
-            {activeTab === "jobs" && <JobManagementModule currency={currency} />}
-            {activeTab === "search" && <EnterpriseSearchEngine currency={currency} />}
-            {activeTab === "whatsapp" && <WhatsAppMessagingSystem />}
-            {activeTab === "whatsapp-upload" && (
-              <WhatsAppIngestionPortal
-                onNavigateToMarketplace={() => setActiveTab("marketplace")}
-              />
-            )}
-            {activeTab === "ai-studio" && <AIVettingStudio />}
-            {activeTab === "payments" && (
-              <PaymentsLedger
-                currency={currency}
-                placementList={placementRecords}
-                isPremiumEmployer={isPremiumEmployer}
-                onActivatePremium={() => setIsPremiumModalOpen(true)}
-              />
-            )}
-            {activeTab === "reviews" && <ReviewAndTrustCenter />}
-            {activeTab === "reports" && (
-              <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-                <PerformanceReportsModule />
-              </div>
-            )}
-            {activeTab === "admin" && <AdminDashboard />}
-          </main>
-        </div>
+            {/* View Switcher */}
+            <main className="pb-16">
+              {activeTab === "landing" && (
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+                  <LandingShowcase onNavigateToTab={(tab) => setActiveTab(tab as any)} />
+                </div>
+              )}
+              {activeTab === "employer" && <EmployerDashboard />}
+              {activeTab === "maid" && <MaidDashboard />}
+              {activeTab === "architecture" && <ArchitectureView />}
+              {activeTab === "marketplace" && (
+                <WorkerDirectory
+                  selectedRole={selectedRole}
+                  selectedCity={selectedCity}
+                  currency={currency}
+                  isPremiumEmployer={isPremiumEmployer}
+                  onOpenPremiumModal={() => setIsPremiumModalOpen(true)}
+                  onOpenHirePlacement={(w) => setPlacementWorker(w)}
+                  onOpenChat={(w) => setChatWorker(w)}
+                />
+              )}
+              {activeTab === "worker" && <MaidDashboard />}
+              {activeTab === "agency" && (
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+                  <AgencyDashboard />
+                </div>
+              )}
+              {activeTab === "jobs" && <EmployerDashboard />}
+              {activeTab === "search" && <EnterpriseSearchEngine currency={currency} />}
+              {activeTab === "whatsapp" && <WhatsAppMessagingSystem />}
+              {activeTab === "whatsapp-upload" && (
+                <WhatsAppIngestionPortal
+                  onNavigateToMarketplace={() => setActiveTab("marketplace")}
+                />
+              )}
+              {activeTab === "ai-studio" && <AIVettingStudio />}
+              {activeTab === "payments" && (
+                <PaymentsLedger
+                  currency={currency}
+                  placementList={placementRecords}
+                  isPremiumEmployer={isPremiumEmployer}
+                  onActivatePremium={() => setIsPremiumModalOpen(true)}
+                />
+              )}
+              {activeTab === "reviews" && <ReviewAndTrustCenter />}
+              {activeTab === "reports" && (
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+                  <PerformanceReportsModule />
+                </div>
+              )}
+              {activeTab === "admin" && <PlatformAdminDashboard />}
+            </main>
+          </div>
 
         {/* Global Modals & Floating Tools */}
         <AuthModal />
@@ -159,6 +186,42 @@ export default function App() {
 
         <WhatsAppHelpWidget />
 
+        {/* Global Notifications Hub Modal */}
+        <NotificationCenterModal
+          isOpen={isNotificationCenterOpen}
+          onClose={() => setIsNotificationCenterOpen(false)}
+          onNavigateToTab={(tab) => {
+            if (tab === "jobs" || tab === "marketplace" || tab === "payments" || tab === "whatsapp" || tab === "worker" || tab === "agency") {
+              setActiveTab(tab as any);
+            }
+          }}
+        />
+
+        {/* Legal & Statutory Compliance Modal */}
+        <LegalComplianceModal
+          isOpen={isLegalModalOpen}
+          onClose={() => setIsLegalModalOpen(false)}
+          initialTab={legalInitialTab}
+        />
+
+        {/* Accessibility & Low-Data Mode Settings Modal */}
+        <AccessibilitySettingsModal
+          isOpen={isAccessibilityModalOpen}
+          onClose={() => setIsAccessibilityModalOpen(false)}
+        />
+
+        {/* Marketing Hub, Spotlight & Live Support Chat Modal */}
+        <MarketingHubModal
+          isOpen={isMarketingHubOpen}
+          onClose={() => setIsMarketingHubOpen(false)}
+          currency={currency}
+          onNavigateToTab={(tab) => {
+            if (tab === "marketplace" || tab === "jobs" || tab === "payments") {
+              setActiveTab(tab as any);
+            }
+          }}
+        />
+
         {/* Sticky Mobile & Tablet Bottom Navigation Bar */}
         <MobileBottomNav
           activeTab={activeTab}
@@ -172,8 +235,13 @@ export default function App() {
         />
 
         {/* Footer */}
-        <Footer />
+        <Footer
+          onOpenLegalCompliance={handleOpenLegal}
+          onOpenAccessibility={() => setIsAccessibilityModalOpen(true)}
+          onOpenMarketingHub={() => setIsMarketingHubOpen(true)}
+        />
       </div>
+    </PlatformProvider>
     </AuthProvider>
   );
 }
