@@ -163,6 +163,7 @@ export interface MaidProfileRecord {
   willingToLiveOut: boolean;
   shortAboutMe: string;
   verificationStatus: "Approved" | "Pending Approval" | "Rejected" | "Suspended";
+  adminRejectionReason?: string;
   documentStatus: {
     nationalId: "Not Submitted" | "Pending Review" | "Verified" | "Rejected";
     certificates: "Not Submitted" | "Pending Review" | "Verified" | "Rejected";
@@ -172,6 +173,8 @@ export interface MaidProfileRecord {
   privateDocuments: PrivateWorkerDocument[];
   isFeatured?: boolean;
   unlockedByEmployerIds: string[]; // Employer user IDs who have paid access
+  submittedForApprovalAt?: string;
+  approvedAt?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -230,6 +233,9 @@ export interface EmployerProfileRecord {
   additionalPhoto2Status?: "Approved" | "Pending Review" | "Flagged" | "Rejected";
   portfolio?: PortfolioItem[];
   householdOrBusinessName?: string;
+  isSubscribed?: boolean;
+  subscriptionPlan?: "Monthly Unlimited" | "Quarterly Pass" | "Annual VIP";
+  subscriptionExpiresAt?: string;
   status: "Approved" | "Pending Approval" | "Suspended";
   createdAt: string;
   updatedAt: string;
@@ -314,9 +320,11 @@ export interface PaymentTransactionRecord {
 export interface PlatformPricingSettings {
   jobPostingFeeUSD: number;
   featuredJobFeeUSD: number;
-  premiumMaidAccessFeeUSD: number;
+  premiumMaidAccessFeeUSD: number; // Single Maid Contact Unlock
+  employerSubscriptionUSD: number; // Unlimited Maid Contact Monthly Pass
   featuredMaidProfileFeeUSD: number;
   urgentPlacementFeeUSD: number;
+  workerJobAccessFeeUSD: number;
   updatedAt: string;
 }
 

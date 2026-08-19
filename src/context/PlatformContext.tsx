@@ -42,11 +42,22 @@ interface PlatformContextType {
   publicMaids: PublicMaidProfile[];
   currentMaidProfile: MaidProfileRecord | null;
   updateMaidProfile: (updates: Partial<MaidProfileRecord>) => void;
+  submitMaidProfileForApproval: () => Promise<{ success: boolean; message: string }>;
+  uploadWorkerDocument: (doc: {
+    type: "National ID" | "Certificate" | "Reference" | "Police Clearance";
+    title: string;
+    documentNumber?: string;
+    fileUrl: string;
+    fileType: "pdf" | "image";
+    fileSize?: string;
+  }) => Promise<{ success: boolean; docId: string }>;
+  deleteWorkerDocument: (docId: string) => Promise<{ success: boolean }>;
   unlockMaidContact: (maidId: string) => Promise<{ success: boolean; error?: string }>;
 
   // Employers & Jobs
   allEmployerProfiles: EmployerProfileRecord[];
   currentEmployerProfile: EmployerProfileRecord | null;
+  subscribeEmployer: (planName?: "Monthly Unlimited" | "Quarterly Pass" | "Annual VIP", months?: number) => Promise<{ success: boolean; error?: string }>;
   allJobs: JobRecord[];
   employerJobs: JobRecord[]; // Jobs belonging strictly to current employer
   createJobPosting: (jobData: Omit<JobRecord, "id" | "employerId" | "employerTitleSurname" | "applicantCount" | "datePosted" | "createdAt"> & { makeFeatured?: boolean }) => Promise<{ success: boolean; jobId?: string; error?: string }>;
@@ -84,6 +95,8 @@ interface PlatformContextType {
   // Admin Specific Controls
   approveMaidProfileAdmin: (maidId: string) => void;
   rejectMaidProfileAdmin: (maidId: string) => void;
+  adminApproveMaidProfileWithFeedback: (maidId: string, notes?: string) => void;
+  adminRejectMaidProfileWithFeedback: (maidId: string, reason: string) => void;
   verifyMaidDocumentAdmin: (maidId: string, docId: string, status: "Verified" | "Rejected") => void;
   approveJobAdmin: (jobId: string) => void;
   rejectJobAdmin: (jobId: string) => void;
@@ -154,9 +167,11 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const publicMaids: PublicMaidProfile[] = allMaidProfiles
     .filter((m) => m.verificationStatus === "Approved" || currentUser.role === "admin" || m.userId === currentUser.id)
     .map((m) => {
+      const isEmployerSubscribed = currentUser.role === "employer" && !!currentEmployerProfile?.isSubscribed;
       const isUnlocked =
         currentUser.role === "admin" ||
         m.userId === currentUser.id ||
+        isEmployerSubscribed ||
         m.unlockedByEmployerIds.includes(currentUser.id);
 
       return {
@@ -555,6 +570,195 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setAllMaidProfiles((prev) =>
       prev.map((m) => (m.userId === currentUser.id ? { ...m, ...updates, updatedAt: new Date().toISOString() } : m))
     );
+  };
+
+  const submitMaidProfileForApproval = async (): Promise<{ success: boolean; message: string }> => {
+    if (currentUser.role !== "maid") {
+      return { success: false, message: "Only worker accounts can submit profiles for approval." };
+    }
+
+    const currentProfile = allMaidProfiles.find((m) => m.userId === currentUser.id);
+    if (!currentProfile) {
+      return { success: false, message: "Maid profile record not found." };
+    }
+
+    const timestamp = new Date().toISOString();
+    setAllMaidProfiles((prev) =>
+      prev.map((m) =>
+        m.userId === currentUser.id
+          ? {
+              ...m,
+              verificationStatus: "Pending Approval",
+              submittedForApprovalAt: timestamp,
+              adminRejectionReason: undefined,
+              updatedAt: timestamp,
+            }
+          : m
+      )
+    );
+
+    // Notify Admin
+    const adminNotif: PlatformNotificationItem = {
+      id: `notif-admin-${Date.now()}`,
+      userId: "usr-admin-01",
+      role: "admin",
+      title: "Worker Profile Submitted for Approval",
+      message: `${currentProfile.firstName} ${currentProfile.surname} (Age: ${calculateAge(currentProfile.dateOfBirth)}) has submitted their profile, National ID, 3 photos, and certificates for administrative review and publication.`,
+      type: "verification",
+      isRead: false,
+      createdAt: timestamp.replace("T", " ").substring(0, 16),
+      actionUrl: "/admin/approvals",
+    };
+    setNotifications((prev) => [adminNotif, ...prev]);
+
+    // Notify Maid
+    const maidNotif: PlatformNotificationItem = {
+      id: `notif-maid-${Date.now()}`,
+      userId: currentUser.id,
+      role: "maid",
+      title: "Profile Submitted to Admin",
+      message: "Your profile, National ID, 3 photos, and certificates have been submitted to the Zimbabwe Maids Centre administrative vetting desk. You will be notified immediately upon approval.",
+      type: "verification",
+      isRead: false,
+      createdAt: timestamp.replace("T", " ").substring(0, 16),
+    };
+    setNotifications((prev) => [maidNotif, ...prev]);
+
+    return {
+      success: true,
+      message: "Your profile has been submitted to the Admin team for review and approval!",
+    };
+  };
+
+  const uploadWorkerDocument = async (doc: {
+    type: "National ID" | "Certificate" | "Reference" | "Police Clearance";
+    title: string;
+    documentNumber?: string;
+    fileUrl: string;
+    fileType: "pdf" | "image";
+    fileSize?: string;
+  }): Promise<{ success: boolean; docId: string }> => {
+    const docId = `doc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    const newDoc = {
+      id: docId,
+      type: doc.type,
+      title: doc.title,
+      documentNumber: doc.documentNumber,
+      fileUrl: doc.fileUrl,
+      fileType: doc.fileType,
+      uploadedAt: new Date().toISOString().split("T")[0],
+      fileSize: doc.fileSize || "1.4 MB",
+      verificationStatus: "Pending Review" as const,
+    };
+
+    setAllMaidProfiles((prev) =>
+      prev.map((m) => {
+        if (m.userId === currentUser.id) {
+          const docs = [...(m.privateDocuments || []), newDoc];
+          const docStatus = { ...m.documentStatus };
+          if (doc.type === "National ID") docStatus.nationalId = "Pending Review";
+          if (doc.type === "Police Clearance") docStatus.policeClearance = "Pending Review";
+          if (doc.type === "Certificate") docStatus.certificates = "Pending Review";
+          if (doc.type === "Reference") docStatus.references = "Pending Review";
+
+          return {
+            ...m,
+            privateDocuments: docs,
+            documentStatus: docStatus,
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return m;
+      })
+    );
+
+    const auditLogItem: MediaAuditLog = {
+      id: `aud-${Date.now()}`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userRole: "maid",
+      action: "UPLOAD_PORTFOLIO_ITEM",
+      mediaType: "portfolio",
+      timestamp: new Date().toISOString().replace("T", " ").substring(0, 19),
+      details: `Uploaded ${doc.type} document: "${doc.title}".`,
+    };
+    setMediaAuditLogs((prev) => [auditLogItem, ...prev]);
+
+    return { success: true, docId };
+  };
+
+  const deleteWorkerDocument = async (docId: string): Promise<{ success: boolean }> => {
+    setAllMaidProfiles((prev) =>
+      prev.map((m) => {
+        if (m.userId === currentUser.id && m.privateDocuments) {
+          return {
+            ...m,
+            privateDocuments: m.privateDocuments.filter((d) => d.id !== docId),
+            updatedAt: new Date().toISOString(),
+          };
+        }
+        return m;
+      })
+    );
+    return { success: true };
+  };
+
+  const subscribeEmployer = async (
+    planName: "Monthly Unlimited" | "Quarterly Pass" | "Annual VIP" = "Monthly Unlimited",
+    months: number = 1
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (currentUser.role !== "employer") {
+      return { success: false, error: "Only employers can activate candidate access subscriptions." };
+    }
+
+    const fee = pricingSettings.employerSubscriptionUSD * months;
+    if (currentWallet.balance < fee) {
+      return {
+        success: false,
+        error: `Insufficient wallet balance ($${currentWallet.balance.toFixed(2)} USD). Subscription fee is $${fee.toFixed(2)} USD. Please add funds via Paynow.`,
+      };
+    }
+
+    const spendRes = await spendFromWallet(
+      `Employer Subscription (${planName} - ${months} Month${months > 1 ? "s" : ""})`,
+      fee
+    );
+
+    if (!spendRes.success) {
+      return { success: false, error: spendRes.error };
+    }
+
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 30 * months);
+    const expiresAt = expiryDate.toISOString().split("T")[0];
+
+    setAllEmployerProfiles((prev) =>
+      prev.map((e) =>
+        e.userId === currentUser.id
+          ? {
+              ...e,
+              isSubscribed: true,
+              subscriptionPlan: planName,
+              subscriptionExpiresAt: expiresAt,
+              updatedAt: new Date().toISOString(),
+            }
+          : e
+      )
+    );
+
+    const notif: PlatformNotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: currentUser.id,
+      role: "employer",
+      title: "Employer Subscription Activated! ✓",
+      message: `You now have unlimited direct contact & WhatsApp access to all verified maids across Zimbabwe until ${expiresAt}.`,
+      type: "payment",
+      isRead: false,
+      createdAt: new Date().toISOString().replace("T", " ").substring(0, 16),
+    };
+    setNotifications((prev) => [notif, ...prev]);
+
+    return { success: true };
   };
 
   // ==========================================
@@ -1111,7 +1315,22 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const approveMaidProfileAdmin = (maidId: string) => {
     setAllMaidProfiles((prev) =>
-      prev.map((m) => (m.id === maidId ? { ...m, verificationStatus: "Approved" } : m))
+      prev.map((m) =>
+        m.id === maidId
+          ? {
+              ...m,
+              verificationStatus: "Approved",
+              approvedAt: new Date().toISOString(),
+              adminRejectionReason: undefined,
+              documentStatus: {
+                nationalId: "Verified",
+                policeClearance: "Verified",
+                certificates: "Verified",
+                references: "Verified",
+              },
+            }
+          : m
+      )
     );
   };
 
@@ -1119,6 +1338,55 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     setAllMaidProfiles((prev) =>
       prev.map((m) => (m.id === maidId ? { ...m, verificationStatus: "Rejected" } : m))
     );
+  };
+
+  const adminApproveMaidProfileWithFeedback = (maidId: string, notes?: string) => {
+    const maid = allMaidProfiles.find((m) => m.id === maidId);
+    approveMaidProfileAdmin(maidId);
+
+    if (maid) {
+      const notif: PlatformNotificationItem = {
+        id: `notif-${Date.now()}`,
+        userId: maid.userId,
+        role: "maid",
+        title: "Profile & Documents Approved! ✓",
+        message: `Congratulations ${maid.firstName}! Your profile, National ID, 3 photos, and certificates have been approved by the Zimbabwe Maids Centre administrative vetting desk. Your profile is now live in the Employer Search Catalog.${notes ? ` Admin Note: "${notes}"` : ""}`,
+        type: "verification",
+        isRead: false,
+        createdAt: new Date().toISOString().replace("T", " ").substring(0, 16),
+      };
+      setNotifications((prev) => [notif, ...prev]);
+    }
+  };
+
+  const adminRejectMaidProfileWithFeedback = (maidId: string, reason: string) => {
+    const maid = allMaidProfiles.find((m) => m.id === maidId);
+    setAllMaidProfiles((prev) =>
+      prev.map((m) =>
+        m.id === maidId
+          ? {
+              ...m,
+              verificationStatus: "Rejected",
+              adminRejectionReason: reason,
+              updatedAt: new Date().toISOString(),
+            }
+          : m
+      )
+    );
+
+    if (maid) {
+      const notif: PlatformNotificationItem = {
+        id: `notif-${Date.now()}`,
+        userId: maid.userId,
+        role: "maid",
+        title: "Profile Review: Action Required",
+        message: `Your worker profile submission requires updates before it can be published. Reason: ${reason}. Please update your ID, photos, or certificates and resubmit for approval.`,
+        type: "verification",
+        isRead: false,
+        createdAt: new Date().toISOString().replace("T", " ").substring(0, 16),
+      };
+      setNotifications((prev) => [notif, ...prev]);
+    }
   };
 
   const verifyMaidDocumentAdmin = (maidId: string, docId: string, status: "Verified" | "Rejected") => {
@@ -1289,9 +1557,13 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         publicMaids,
         currentMaidProfile,
         updateMaidProfile,
+        submitMaidProfileForApproval,
+        uploadWorkerDocument,
+        deleteWorkerDocument,
         unlockMaidContact,
         allEmployerProfiles,
         currentEmployerProfile,
+        subscribeEmployer,
         allJobs,
         employerJobs,
         createJobPosting,
@@ -1321,6 +1593,8 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         spendFromWallet,
         approveMaidProfileAdmin,
         rejectMaidProfileAdmin,
+        adminApproveMaidProfileWithFeedback,
+        adminRejectMaidProfileWithFeedback,
         verifyMaidDocumentAdmin,
         approveJobAdmin,
         rejectJobAdmin,

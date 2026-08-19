@@ -53,6 +53,7 @@ export const EmployerDashboard: React.FC = () => {
     closeJobPosting,
     featureJobPosting,
     unlockMaidContact,
+    subscribeEmployer,
     updateApplicationStatus,
     createPaynowDeposit,
     verifyPaynowPayment,
@@ -78,6 +79,8 @@ export const EmployerDashboard: React.FC = () => {
   const [selectedMaid, setSelectedMaid] = useState<PublicMaidProfile | null>(null);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [unlockMessage, setUnlockMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isSubscribing, setIsSubscribing] = useState(false);
+  const [subscriptionMessage, setSubscriptionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Add Funds Modal State (Paynow Integration)
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
@@ -209,6 +212,26 @@ export const EmployerDashboard: React.FC = () => {
     }
   };
 
+  // Handle Employer Monthly Subscription
+  const handleSubscribeEmployer = async () => {
+    setIsSubscribing(true);
+    setSubscriptionMessage(null);
+    const res = await subscribeEmployer("Monthly Unlimited", 1);
+    setIsSubscribing(false);
+    if (res.success) {
+      setSubscriptionMessage({
+        type: "success",
+        text: "Employer Subscription Activated! You now have unlimited access to direct phone, WhatsApp, and documents for all domestic workers.",
+      });
+      setTimeout(() => setSubscriptionMessage(null), 5000);
+    } else {
+      setSubscriptionMessage({
+        type: "error",
+        text: res.error || "Failed to activate subscription. Please add funds to your wallet via Paynow.",
+      });
+    }
+  };
+
   // Handle Job Post Submit
   const handleCreateJob = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -295,6 +318,85 @@ export const EmployerDashboard: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Subscription Status & Activation Banner */}
+      <div
+        className={`p-5 rounded-3xl border flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm transition-all ${
+          currentEmployerProfile?.isSubscribed
+            ? "bg-emerald-50/90 border-emerald-200 text-emerald-950"
+            : "bg-gradient-to-r from-amber-50 via-emerald-50 to-teal-50 border-amber-200 text-slate-900"
+        }`}
+      >
+        <div className="flex items-start gap-3.5">
+          <div
+            className={`p-3 rounded-2xl flex-shrink-0 ${
+              currentEmployerProfile?.isSubscribed ? "bg-emerald-600 text-white" : "bg-amber-600 text-white"
+            }`}
+          >
+            {currentEmployerProfile?.isSubscribed ? <ShieldCheck className="w-6 h-6" /> : <Sparkles className="w-6 h-6" />}
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h3 className="font-black text-sm tracking-tight">
+                {currentEmployerProfile?.isSubscribed
+                  ? "Unlimited Employer Subscription Active"
+                  : "Employer Subscription: Unlimited Domestic Worker Contact Access"}
+              </h3>
+              <span
+                className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                  currentEmployerProfile?.isSubscribed
+                    ? "bg-emerald-200/70 text-emerald-900"
+                    : "bg-amber-200/80 text-amber-950"
+                }`}
+              >
+                {currentEmployerProfile?.isSubscribed ? "Subscribed Member" : `Plan: $${pricingSettings.employerSubscriptionUSD || 25}.00 USD/mo`}
+              </span>
+            </div>
+            <p className="text-xs text-slate-600 max-w-2xl leading-relaxed">
+              {currentEmployerProfile?.isSubscribed
+                ? `Your subscription is active (Plan: ${currentEmployerProfile.subscriptionPlan || "Monthly Unlimited"}${
+                    currentEmployerProfile.subscriptionExpiryDate ? ` • Valid until ${currentEmployerProfile.subscriptionExpiryDate}` : ""
+                  }). You have unlocked full phone numbers, WhatsApp lines, and verified background documents for all domestic workers.`
+                : "Only subscribed employers can directly call and WhatsApp domestic workers across Zimbabwe. Subscribe for unlimited monthly access or unlock individual candidates from your wallet balance."}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {!currentEmployerProfile?.isSubscribed ? (
+            <button
+              onClick={handleSubscribeEmployer}
+              disabled={isSubscribing}
+              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center gap-2 whitespace-nowrap disabled:opacity-50"
+            >
+              <CreditCard className="w-4 h-4" />
+              {isSubscribing ? "Subscribing..." : `Subscribe Now ($${pricingSettings.employerSubscriptionUSD || 25}.00 USD)`}
+            </button>
+          ) : (
+            <div className="px-4 py-2 bg-emerald-100/80 text-emerald-800 font-bold text-xs rounded-xl border border-emerald-200 flex items-center gap-1.5">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              All Contacts Unlocked
+            </div>
+          )}
+        </div>
+      </div>
+
+      {subscriptionMessage && (
+        <div
+          className={`p-4 rounded-2xl text-xs font-semibold flex items-center gap-2 animate-fadeIn ${
+            subscriptionMessage.type === "success"
+              ? "bg-emerald-100 border border-emerald-300 text-emerald-900"
+              : "bg-rose-100 border border-rose-300 text-rose-900"
+          }`}
+        >
+          {subscriptionMessage.type === "success" ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          ) : (
+            <AlertCircle className="w-4 h-4 text-rose-600" />
+          )}
+          {subscriptionMessage.text}
+        </div>
+      )}
 
       {/* Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-2 scrollbar-none">

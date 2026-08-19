@@ -45,6 +45,8 @@ export const PlatformAdminDashboard: React.FC = () => {
     pricingSettings,
     approveMaidProfileAdmin,
     rejectMaidProfileAdmin,
+    adminApproveMaidProfileWithFeedback,
+    adminRejectMaidProfileWithFeedback,
     verifyMaidDocumentAdmin,
     approveJobAdmin,
     rejectJobAdmin,
@@ -60,6 +62,8 @@ export const PlatformAdminDashboard: React.FC = () => {
 
   // Selected Maid for Document Inspection
   const [inspectingMaid, setInspectingMaid] = useState<MaidProfileRecord | null>(null);
+  const [maidFeedbackText, setMaidFeedbackText] = useState("");
+  const [maidReviewMessage, setMaidReviewMessage] = useState<string | null>(null);
 
   // Selected Media Item for Deep Inspection
   const [inspectingMediaItem, setInspectingMediaItem] = useState<PortfolioItem | null>(null);
@@ -392,20 +396,32 @@ export const PlatformAdminDashboard: React.FC = () => {
                       </td>
                       <td className="py-3.5 px-3 text-right">
                         <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => setInspectingMaid(maid)}
+                            className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold rounded-lg flex items-center gap-1"
+                            title="Inspect Documents, Photos & Approve"
+                          >
+                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                            Review
+                          </button>
                           {maid.verificationStatus !== "Approved" && (
                             <button
-                              onClick={() => approveMaidProfileAdmin(maid.id)}
+                              onClick={() => {
+                                adminApproveMaidProfileWithFeedback(maid.id, "Approved by Administrator");
+                              }}
                               className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg"
-                              title="Approve Profile"
+                              title="Quick Approve Profile"
                             >
                               <Check className="w-4 h-4" />
                             </button>
                           )}
                           {maid.verificationStatus !== "Rejected" && (
                             <button
-                              onClick={() => rejectMaidProfileAdmin(maid.id)}
+                              onClick={() => {
+                                setInspectingMaid(maid);
+                              }}
                               className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg"
-                              title="Reject Profile"
+                              title="Reject Profile with Reason"
                             >
                               <X className="w-4 h-4" />
                             </button>
@@ -1143,76 +1159,214 @@ export const PlatformAdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* INSPECT MAID DOCUMENTS MODAL */}
+      {/* INSPECT MAID DOCUMENTS & PROFILE APPROVAL MODAL */}
       {inspectingMaid && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative my-8 space-y-6">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative my-8 space-y-6 max-h-[90vh] overflow-y-auto">
             <button
-              onClick={() => setInspectingMaid(null)}
+              onClick={() => {
+                setInspectingMaid(null);
+                setMaidReviewMessage(null);
+              }}
               className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="space-y-1">
-              <div className="text-xs font-bold text-rose-600 uppercase">Administrator Vault Review</div>
+              <div className="text-xs font-bold text-rose-600 uppercase flex items-center gap-1.5">
+                <ShieldCheck className="w-4 h-4" />
+                Worker Posting Approval & Vault Review
+              </div>
               <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                {inspectingMaid.firstName} {inspectingMaid.surname}'s Documents
+                {inspectingMaid.firstName} {inspectingMaid.surname}
               </h2>
-              <p className="text-xs text-slate-500">
-                National ID: <strong className="font-mono text-slate-800">{inspectingMaid.nationalIdNumber}</strong> • DOB: {inspectingMaid.dateOfBirth} (Age {calculateAge(inspectingMaid.dateOfBirth)})
-              </p>
+              <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <span>National ID: <strong className="font-mono text-slate-800">{inspectingMaid.nationalIdNumber}</strong></span>
+                <span>•</span>
+                <span>DOB: {inspectingMaid.dateOfBirth} (Age {calculateAge(inspectingMaid.dateOfBirth)})</span>
+                <span>•</span>
+                <span>Location: {inspectingMaid.location} ({inspectingMaid.suburb})</span>
+              </div>
             </div>
 
-            <div className="space-y-3">
-              {inspectingMaid.privateDocuments.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between gap-4 text-xs"
-                >
-                  <div>
-                    <div className="font-bold text-slate-900">{doc.documentType}</div>
-                    <div className="text-[11px] text-slate-500 font-mono">ID: {doc.id} • {doc.uploadedAt}</div>
-                  </div>
+            {maidReviewMessage && (
+              <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-xs font-bold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                {maidReviewMessage}
+              </div>
+            )}
 
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        doc.verificationStatus === "Verified"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : doc.verificationStatus === "Rejected"
-                          ? "bg-rose-100 text-rose-800"
-                          : "bg-amber-100 text-amber-800"
-                      }`}
-                    >
-                      {doc.verificationStatus}
-                    </span>
-
-                    {doc.verificationStatus !== "Verified" && (
-                      <button
-                        onClick={() => {
-                          verifyMaidDocumentAdmin(inspectingMaid.id, doc.id, "Verified");
-                          setInspectingMaid({
-                            ...inspectingMaid,
-                            privateDocuments: inspectingMaid.privateDocuments.map((d) =>
-                              d.id === doc.id ? { ...d, verificationStatus: "Verified" } : d
-                            ),
-                          });
-                        }}
-                        className="p-1 bg-emerald-600 text-white rounded hover:bg-emerald-500"
-                        title="Mark Verified"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
+            {/* Profile Photos Preview (Up to 3 Photos) */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <Camera className="w-3.5 h-3.5 text-emerald-600" />
+                Worker Photos (Main Portrait + Extra Photos)
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <img
+                    src={inspectingMaid.profilePhoto}
+                    alt="Main Portrait"
+                    referrerPolicy="no-referrer"
+                    className="w-full h-28 object-cover rounded-xl border border-slate-200 bg-slate-100"
+                  />
+                  <span className="text-[10px] text-slate-400 font-bold block text-center">Main Profile</span>
                 </div>
-              ))}
+                {inspectingMaid.additionalPhotos?.slice(0, 2).map((photo, i) => (
+                  <div key={i} className="space-y-1">
+                    <img
+                      src={photo}
+                      alt={`Photo ${i + 2}`}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-28 object-cover rounded-xl border border-slate-200 bg-slate-100"
+                    />
+                    <span className="text-[10px] text-slate-400 font-bold block text-center">Photo {i + 2}</span>
+                  </div>
+                ))}
+                {(!inspectingMaid.additionalPhotos || inspectingMaid.additionalPhotos.length === 0) && (
+                  <div className="h-28 rounded-xl border-2 border-dashed border-slate-200 flex items-center justify-center text-[11px] text-slate-400 text-center p-2">
+                    No extra photos
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="pt-2 flex justify-end">
+            {/* Bio & Details Summary */}
+            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs">
+              <div className="font-bold text-slate-800">About & Skills:</div>
+              <p className="text-slate-600 italic">"{inspectingMaid.shortAboutMe}"</p>
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {inspectingMaid.skills.map((s, idx) => (
+                  <span key={idx} className="px-2 py-0.5 bg-white border border-slate-200 text-slate-700 text-[10px] font-bold rounded-md">
+                    {s}
+                  </span>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-[11px] border-t border-slate-200 text-slate-700">
+                <div><strong>Exp:</strong> {inspectingMaid.experienceYears} Years</div>
+                <div><strong>Salary:</strong> ${inspectingMaid.expectedSalary}/mo</div>
+                <div><strong>Live-in:</strong> {inspectingMaid.willingToLiveIn ? "Yes" : "No"}</div>
+                <div><strong>Children:</strong> {inspectingMaid.numberOfChildren}</div>
+              </div>
+            </div>
+
+            {/* Uploaded Documents Vault */}
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5 text-emerald-600" />
+                Submitted Private Documents ({inspectingMaid.privateDocuments.length})
+              </label>
+              <div className="space-y-2">
+                {inspectingMaid.privateDocuments.length === 0 ? (
+                  <div className="p-4 bg-amber-50 rounded-xl border border-amber-200 text-amber-800 text-xs font-medium">
+                    No documents uploaded yet.
+                  </div>
+                ) : (
+                  inspectingMaid.privateDocuments.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div>
+                        <div className="font-bold text-slate-900">{doc.documentType}</div>
+                        <div className="text-[10px] text-slate-500 font-mono">Uploaded: {doc.uploadedAt}</div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            doc.verificationStatus === "Verified"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : doc.verificationStatus === "Rejected"
+                              ? "bg-rose-100 text-rose-800"
+                              : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {doc.verificationStatus}
+                        </span>
+
+                        {doc.verificationStatus !== "Verified" && (
+                          <button
+                            onClick={() => {
+                              verifyMaidDocumentAdmin(inspectingMaid.id, doc.id, "Verified");
+                              setInspectingMaid({
+                                ...inspectingMaid,
+                                privateDocuments: inspectingMaid.privateDocuments.map((d) =>
+                                  d.id === doc.id ? { ...d, verificationStatus: "Verified" } : d
+                                ),
+                              });
+                            }}
+                            className="px-2 py-1 bg-emerald-600 text-white font-bold text-[10px] rounded hover:bg-emerald-500 flex items-center gap-1"
+                          >
+                            <Check className="w-3 h-3" /> Verify
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Admin Posting Approval / Rejection Feedback Section */}
+            <div className="p-4 bg-slate-100/70 rounded-2xl border border-slate-200 space-y-3">
+              <label className="block text-xs font-bold text-slate-800">
+                Admin Posting Review & Feedback Note:
+              </label>
+              <textarea
+                value={maidFeedbackText}
+                onChange={(e) => setMaidFeedbackText(e.target.value)}
+                placeholder="e.g. All certificates verified. Profile published to public marketplace! OR Please upload a clearer copy of your National ID."
+                rows={2}
+                className="w-full text-xs p-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900 bg-white"
+              />
+
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const fb = maidFeedbackText.trim() || "Profile and credentials approved by Zimbabwe Maids Centre Administration.";
+                    adminApproveMaidProfileWithFeedback(inspectingMaid.id, fb);
+                    setMaidReviewMessage("Worker profile APPROVED and published to marketplace!");
+                    setTimeout(() => {
+                      setInspectingMaid(null);
+                      setMaidReviewMessage(null);
+                      setMaidFeedbackText("");
+                    }, 1200);
+                  }}
+                  className="w-full sm:flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5"
+                >
+                  <Check className="w-4 h-4" />
+                  Approve Profile & Publish
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const fb = maidFeedbackText.trim() || "Documents or profile photos require revision. Please update and re-submit.";
+                    adminRejectMaidProfileWithFeedback(inspectingMaid.id, fb);
+                    setMaidReviewMessage("Worker profile REJECTED with feedback.");
+                    setTimeout(() => {
+                      setInspectingMaid(null);
+                      setMaidReviewMessage(null);
+                      setMaidFeedbackText("");
+                    }, 1200);
+                  }}
+                  className="w-full sm:flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5"
+                >
+                  <X className="w-4 h-4" />
+                  Reject with Feedback
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-1 flex justify-end">
               <button
-                onClick={() => setInspectingMaid(null)}
+                onClick={() => {
+                  setInspectingMaid(null);
+                  setMaidReviewMessage(null);
+                }}
                 className="px-5 py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl"
               >
                 Close Review

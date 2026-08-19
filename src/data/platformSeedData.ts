@@ -953,6 +953,30 @@ export const INITIAL_WALLETS: Record<string, EmployerWalletRecord> = {
     totalSpent: 0.0,
     updatedAt: "2026-08-08",
   },
+  "usr-maid-01": {
+    id: "w-maid-01",
+    userId: "usr-maid-01",
+    balance: 10.0,
+    totalDeposited: 10.0,
+    totalSpent: 0.0,
+    updatedAt: "2026-08-15",
+  },
+  "usr-maid-02": {
+    id: "w-maid-02",
+    userId: "usr-maid-02",
+    balance: 5.0,
+    totalDeposited: 5.0,
+    totalSpent: 0.0,
+    updatedAt: "2026-08-14",
+  },
+  "usr-maid-03": {
+    id: "w-maid-03",
+    userId: "usr-maid-03",
+    balance: 0.0,
+    totalDeposited: 0.0,
+    totalSpent: 0.0,
+    updatedAt: "2026-08-14",
+  },
 };
 
 export const INITIAL_TRANSACTIONS: PaymentTransactionRecord[] = [
@@ -1026,8 +1050,10 @@ export const INITIAL_PLATFORM_PRICING: PlatformPricingSettings = {
   jobPostingFeeUSD: 5,
   featuredJobFeeUSD: 10,
   premiumMaidAccessFeeUSD: 5,
+  employerSubscriptionUSD: 25,
   featuredMaidProfileFeeUSD: 5,
   urgentPlacementFeeUSD: 15,
+  workerJobAccessFeeUSD: 1,
   updatedAt: "2026-08-15",
 };
 
