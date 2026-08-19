@@ -4,17 +4,23 @@ export type UserRoleType = "maid" | "employer" | "admin";
 
 export type PortfolioCategory =
   | "Cleaning Results"
+  | "House Cleaning"
   | "Gardening & Landscaping"
   | "Cooking & Culinary"
+  | "Cooking & Meal Prep"
   | "Childcare & Nannying"
+  | "Childcare & Infant Care"
   | "Plumbing"
   | "Electrical"
   | "Carpentry"
   | "Painting & Decorating"
   | "Construction & Masonry"
   | "Elderly Care"
+  | "Elderly & Patient Care"
   | "Laundry & Ironing"
   | "Housekeeping & Organization"
+  | "General Maintenance"
+  | "Residence & Accommodation"
   | "Workplace & Facility"
   | "Other Services";
 

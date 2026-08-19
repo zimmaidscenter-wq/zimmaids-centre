@@ -3,6 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
+import { Paynow } from "paynow";
 
 dotenv.config();
 
@@ -10,6 +11,30 @@ const app = express();
 const PORT = 3000;
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Paynow Zimbabwe SDK Client Helper
+function getPaynowClient(): Paynow | null {
+  const integrationId = process.env.PAYNOW_INTEGRATION_ID?.trim();
+  const integrationKey = process.env.PAYNOW_INTEGRATION_KEY?.trim();
+  const resultUrl =
+    process.env.PAYNOW_RESULT_URL?.trim() ||
+    "https://zimbabwemaidscentre.com/api/paynow/result";
+  const returnUrl =
+    process.env.PAYNOW_RETURN_URL?.trim() ||
+    "https://zimbabwemaidscentre.com/payment-success";
+
+  if (!integrationId || !integrationKey) {
+    return null;
+  }
+
+  try {
+    return new Paynow(integrationId, integrationKey, resultUrl, returnUrl);
+  } catch (err) {
+    console.error("Failed to initialize Paynow SDK client");
+    return null;
+  }
+}
 
 // Lazy Google GenAI Client with User-Agent header for AI Studio
 function getAIClient() {
@@ -1058,12 +1083,24 @@ let serverPricingSettings = {
 };
 
 // 1. POST /api/payment/create - Initialize Paynow transaction
-app.post("/api/payment/create", (req, res) => {
+app.post("/api/payment/create", async (req, res) => {
   try {
-    const { userId, userRole = "employer", userName = "Client", amount, service = "Wallet Deposit", paymentMethod = "Paynow", metadata } = req.body;
-    
+    const {
+      userId,
+      userRole = "employer",
+      userName = "Client",
+      userEmail,
+      phone,
+      amount,
+      service = "Wallet Deposit",
+      paymentMethod = "Paynow",
+      metadata,
+    } = req.body;
+
     if (!userId || !amount || Number(amount) <= 0) {
-      return res.status(400).json({ error: "Invalid payment request. UserId and positive amount are required." });
+      return res.status(400).json({
+        error: "Invalid payment request. UserId and positive amount are required.",
+      });
     }
 
     const numericAmount = Math.round(Number(amount) * 100) / 100;
@@ -1071,8 +1108,59 @@ app.post("/api/payment/create", (req, res) => {
     const randomSuffix = Math.floor(100000 + Math.random() * 900000);
     const paynowReference = `MAID-PAY-${timestamp}-${randomSuffix}`;
     const txId = `tx-${timestamp}`;
-    const pollUrl = `https://www.paynow.co.zw/Interface/CheckPayment/?guid=poll-${paynowReference}`;
-    const checkoutUrl = `https://www.paynow.co.zw/Payment/ConfirmPayment/${paynowReference}`;
+
+    const paynow = getPaynowClient();
+    const authEmail =
+      userEmail ||
+      process.env.PAYNOW_MERCHANT_EMAIL?.trim() ||
+      "billing@zimbabwemaidscentre.com";
+
+    let pollUrl = "";
+    let checkoutUrl = "";
+    let instructions = "";
+
+    if (paynow) {
+      const payment = paynow.createPayment(paynowReference, authEmail);
+      payment.add(service || "Wallet Deposit", numericAmount);
+
+      let paynowResponse: any;
+      const lowerMethod = (paymentMethod || "").toLowerCase();
+
+      if (
+        phone &&
+        (lowerMethod.includes("ecocash") || lowerMethod.includes("onemoney"))
+      ) {
+        const methodType = lowerMethod.includes("onemoney")
+          ? "onemoney"
+          : "ecocash";
+        paynowResponse = await paynow.sendMobile(payment, phone, methodType);
+      } else {
+        paynowResponse = await paynow.send(payment);
+      }
+
+      if (paynowResponse && paynowResponse.success) {
+        pollUrl = (paynowResponse.pollUrl || "").toString();
+        checkoutUrl = (paynowResponse.redirectUrl || "").toString();
+        instructions = (paynowResponse.instructions || "").toString();
+      } else {
+        const errorMessage =
+          paynowResponse?.error ||
+          "Payment gateway was unable to initiate the transaction with Paynow.";
+        console.error("Paynow transaction initialization failed:", errorMessage);
+        return res.status(502).json({
+          error: "Payment Gateway Error",
+          message:
+            "Could not initiate payment with Paynow Zimbabwe. Please check payment details or try again.",
+          details: errorMessage,
+        });
+      }
+    } else {
+      return res.status(503).json({
+        error: "Payment Gateway Unconfigured",
+        message:
+          "Paynow integration credentials (PAYNOW_INTEGRATION_ID / PAYNOW_INTEGRATION_KEY) are not set in the server environment.",
+      });
+    }
 
     const newTx: ServerTransaction = {
       id: txId,
@@ -1102,21 +1190,28 @@ app.post("/api/payment/create", (req, res) => {
       amount: numericAmount,
       currency: "USD",
       service,
-      instructions: "Proceed with Paynow Zimbabwe authorization. Funds will be verified server-side.",
+      instructions:
+        instructions ||
+        "Proceed with Paynow Zimbabwe authorization. Funds will be verified server-side.",
     });
   } catch (err: any) {
-    console.error("Payment Create Error:", err);
-    res.status(500).json({ error: "Failed to initialize payment", details: err.message });
+    console.error("Payment Create Error:", err.message || err);
+    res.status(500).json({
+      error: "Failed to initialize payment",
+      details: err.message || "Unknown error",
+    });
   }
 });
 
 // 2. POST /api/payment/verify - Direct Server-to-Paynow Verification
-app.post("/api/payment/verify", (req, res) => {
+app.post("/api/payment/verify", async (req, res) => {
   try {
     const { transactionId, paynowReference } = req.body;
 
     if (!transactionId && !paynowReference) {
-      return res.status(400).json({ error: "Transaction ID or Paynow Reference required for verification." });
+      return res.status(400).json({
+        error: "Transaction ID or Paynow Reference required for verification.",
+      });
     }
 
     const tx = serverTransactions.find(
@@ -1127,7 +1222,7 @@ app.post("/api/payment/verify", (req, res) => {
       return res.status(404).json({ error: "Transaction record not found." });
     }
 
-    // If already verified, return idempotent success
+    // Idempotency: If already verified, return success without double-crediting
     if (tx.isVerified && tx.status === "Paid") {
       const currentWallet = serverWallets[tx.userId] || {
         userId: tx.userId,
@@ -1146,80 +1241,174 @@ app.post("/api/payment/verify", (req, res) => {
       });
     }
 
-    // In a live production deployment, the server queries the Paynow Poll URL securely using PAYNOW_INTEGRATION_KEY.
-    // For sandbox/production resilience, we verify the transaction record and sign it.
-    const verifiedAt = new Date().toISOString().replace("T", " ").substring(0, 19);
-    tx.status = "Paid";
-    tx.isVerified = true;
-    tx.verifiedAt = verifiedAt;
+    const paynow = getPaynowClient();
+    let isConfirmedPaid = false;
 
-    // Credit user's wallet if service is a deposit
-    if (tx.service.toLowerCase().includes("deposit") || tx.service.toLowerCase().includes("wallet")) {
-      if (!serverWallets[tx.userId]) {
-        serverWallets[tx.userId] = {
-          userId: tx.userId,
-          balance: 0,
-          totalDeposited: 0,
-          totalSpent: 0,
-          updatedAt: verifiedAt,
-        };
+    // Strictly poll Paynow with the pollUrl and integration key (never trust client)
+    if (paynow && tx.pollUrl && tx.pollUrl.startsWith("http")) {
+      try {
+        const statusResponse: any = await paynow.pollTransaction(tx.pollUrl);
+        if (statusResponse) {
+          const paynowStatusStr = (statusResponse.status || "").toString();
+          const normalized = paynowStatusStr.toLowerCase();
+          if (normalized === "paid" || normalized === "awaiting delivery") {
+            isConfirmedPaid = true;
+          } else if (
+            normalized === "cancelled" ||
+            normalized === "failed" ||
+            normalized === "expired"
+          ) {
+            tx.status = (normalized.charAt(0).toUpperCase() +
+              normalized.slice(1)) as any;
+          }
+        }
+      } catch (pollErr: any) {
+        console.error("Paynow poll verification error:", pollErr.message || pollErr);
       }
-      serverWallets[tx.userId].balance += tx.amount;
-      serverWallets[tx.userId].totalDeposited += tx.amount;
-      serverWallets[tx.userId].updatedAt = verifiedAt;
     }
 
-    const updatedWallet = serverWallets[tx.userId];
+    if (isConfirmedPaid) {
+      const verifiedAt = new Date()
+        .toISOString()
+        .replace("T", " ")
+        .substring(0, 19);
+      tx.status = "Paid";
+      tx.isVerified = true;
+      tx.verifiedAt = verifiedAt;
 
-    res.json({
-      verified: true,
-      status: "Paid",
-      amount: tx.amount,
-      balance: updatedWallet ? updatedWallet.balance : 0,
-      transaction: tx,
-      message: `Payment of $${tx.amount.toFixed(2)} USD successfully verified by Zimbabwe Maids Centre payment engine.`,
-    });
+      // Credit user's wallet if service is a deposit
+      if (
+        tx.service.toLowerCase().includes("deposit") ||
+        tx.service.toLowerCase().includes("wallet")
+      ) {
+        if (!serverWallets[tx.userId]) {
+          serverWallets[tx.userId] = {
+            userId: tx.userId,
+            balance: 0,
+            totalDeposited: 0,
+            totalSpent: 0,
+            updatedAt: verifiedAt,
+          };
+        }
+        serverWallets[tx.userId].balance += tx.amount;
+        serverWallets[tx.userId].totalDeposited += tx.amount;
+        serverWallets[tx.userId].updatedAt = verifiedAt;
+      }
+
+      const updatedWallet = serverWallets[tx.userId];
+
+      return res.json({
+        verified: true,
+        status: "Paid",
+        amount: tx.amount,
+        balance: updatedWallet ? updatedWallet.balance : 0,
+        transaction: tx,
+        message: `Payment of $${tx.amount.toFixed(2)} USD successfully confirmed with Paynow Zimbabwe.`,
+      });
+    } else {
+      return res.json({
+        verified: false,
+        status: tx.status,
+        message: `Payment status is currently ${tx.status}. Paynow has not confirmed settlement yet.`,
+        transaction: tx,
+      });
+    }
   } catch (err: any) {
-    console.error("Payment Verification Error:", err);
-    res.status(500).json({ error: "Server payment verification failed", details: err.message });
+    console.error("Payment Verification Error:", err.message || err);
+    res.status(500).json({
+      error: "Server payment verification failed",
+      details: err.message || "Unknown error",
+    });
   }
 });
 
 // 3. POST /api/paynow/result - Paynow IPN Webhook Callback
-app.post("/api/paynow/result", (req, res) => {
+app.post("/api/paynow/result", async (req, res) => {
   try {
-    const { reference, paynowreference, status, amount } = req.body;
-    console.log(`[Paynow IPN Callback] Ref: ${reference}, PaynowRef: ${paynowreference}, Status: ${status}`);
+    const rawData = req.body || {};
+    const reference = (rawData.reference || rawData.Reference || "").toString();
+    const paynowReference = (
+      rawData.paynowreference ||
+      rawData.PaynowReference ||
+      ""
+    ).toString();
+    const status = (rawData.status || rawData.Status || "").toString();
+    const pollUrl = (rawData.pollurl || rawData.PollUrl || "").toString();
 
-    const tx = serverTransactions.find(
-      (t) => t.paynowReference === reference || t.id === reference
+    console.log(
+      `[Paynow IPN Callback Received] Reference: ${reference}, PaynowRef: ${paynowReference}, Status: ${status}`
     );
 
-    if (tx && !tx.isVerified) {
-      if (status?.toLowerCase() === "paid" || status?.toLowerCase() === "awaiting delivery") {
+    if (!reference && !paynowReference) {
+      return res.status(400).send("Invalid IPN payload: missing reference");
+    }
+
+    const tx = serverTransactions.find(
+      (t) =>
+        (reference && t.paynowReference === reference) ||
+        (reference && t.id === reference) ||
+        (paynowReference && t.paynowReference === paynowReference)
+    );
+
+    if (tx) {
+      let verifiedStatus = status.toLowerCase();
+      const paynow = getPaynowClient();
+
+      // Double-verify by polling the pollUrl if available
+      const urlToPoll = pollUrl || tx.pollUrl;
+      if (paynow && urlToPoll && urlToPoll.startsWith("http")) {
+        try {
+          const pollResp: any = await paynow.pollTransaction(urlToPoll);
+          if (pollResp && pollResp.status) {
+            verifiedStatus = pollResp.status.toString().toLowerCase();
+          }
+        } catch (e: any) {
+          console.error("IPN poll verification error:", e.message || e);
+        }
+      }
+
+      if (
+        (verifiedStatus === "paid" || verifiedStatus === "awaiting delivery") &&
+        !tx.isVerified
+      ) {
+        const verifiedAt = new Date()
+          .toISOString()
+          .replace("T", " ")
+          .substring(0, 19);
         tx.status = "Paid";
         tx.isVerified = true;
-        tx.verifiedAt = new Date().toISOString();
+        tx.verifiedAt = verifiedAt;
 
-        if (tx.service.toLowerCase().includes("deposit")) {
+        if (
+          tx.service.toLowerCase().includes("deposit") ||
+          tx.service.toLowerCase().includes("wallet")
+        ) {
           if (!serverWallets[tx.userId]) {
             serverWallets[tx.userId] = {
               userId: tx.userId,
               balance: 0,
               totalDeposited: 0,
               totalSpent: 0,
-              updatedAt: new Date().toISOString(),
+              updatedAt: verifiedAt,
             };
           }
           serverWallets[tx.userId].balance += tx.amount;
           serverWallets[tx.userId].totalDeposited += tx.amount;
+          serverWallets[tx.userId].updatedAt = verifiedAt;
         }
+      } else if (
+        ["cancelled", "failed", "expired"].includes(verifiedStatus) &&
+        !tx.isVerified
+      ) {
+        tx.status = (verifiedStatus.charAt(0).toUpperCase() +
+          verifiedStatus.slice(1)) as any;
       }
     }
 
+    // Paynow requires a 200 response
     res.status(200).send("OK");
   } catch (err: any) {
-    console.error("Paynow IPN Error:", err);
+    console.error("Paynow IPN Callback Error:", err.message || err);
     res.status(500).send("ERROR");
   }
 });
