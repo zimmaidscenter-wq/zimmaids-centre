@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { WorkerProfile, PortfolioItem } from "../../types/marketplace";
 import {
   ShieldCheck,
@@ -10,6 +10,7 @@ import {
   Volume2,
   CheckCircle,
   X,
+  ArrowLeft,
   CreditCard,
   MessageSquare,
   Award,
@@ -36,6 +37,7 @@ import { CandidatePhotoGallery } from "./CandidatePhotoGallery";
 import { VerifiedBadge } from "../common/VerifiedBadge";
 import { WorkerAvailabilityCalendarModal } from "../worker/WorkerAvailabilityCalendarModal";
 import { DocumentVaultModal } from "../common/DocumentVaultModal";
+import { ImageLightboxModal, LightboxImageItem } from "../common/ImageLightboxModal";
 
 interface WorkerProfileModalProps {
   worker: WorkerProfile | null;
@@ -66,7 +68,43 @@ export const WorkerProfileModal: React.FC<WorkerProfileModalProps> = ({
   const [isDocumentVaultModalOpen, setIsDocumentVaultModalOpen] = useState<boolean>(false);
   const [portfolioFilter, setPortfolioFilter] = useState<"All" | "Photos" | "Documents">("All");
 
+  const [isLightboxOpen, setIsLightboxOpen] = useState<boolean>(false);
+  const [lightboxImages, setLightboxImages] = useState<LightboxImageItem[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState<number>(0);
+
+  // Universal Back Navigation (Browser Back Button & Escape Key)
+  useEffect(() => {
+    if (!worker) return;
+
+    const stateObj = { workerProfileModalOpen: true, workerId: worker.id };
+    window.history.pushState(stateObj, "");
+
+    const handlePopState = () => {
+      onClose();
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !isViewerOpen && !isLightboxOpen && !isAddModalOpen && !isAvailabilityModalOpen && !isDocumentVaultModalOpen) {
+        onClose();
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [worker, onClose, isViewerOpen, isLightboxOpen, isAddModalOpen, isAvailabilityModalOpen, isDocumentVaultModalOpen]);
+
   if (!worker) return null;
+
+  const openLightboxWithImages = (images: LightboxImageItem[], index = 0) => {
+    setLightboxImages(images);
+    setLightboxIndex(index);
+    setIsLightboxOpen(true);
+  };
 
   // Local portfolio list fallback or custom additions
   const portfolioItems: PortfolioItem[] = worker.portfolio && worker.portfolio.length > 0
@@ -162,22 +200,71 @@ export const WorkerProfileModal: React.FC<WorkerProfileModalProps> = ({
     <>
       <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
         <div className="bg-white border border-slate-200 rounded-3xl max-w-3xl w-full overflow-hidden shadow-2xl relative animate-in fade-in zoom-in duration-200 my-8">
-          {/* Top Header Banner */}
+          {/* Top Header Banner with Back & Close Buttons */}
           <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-emerald-950 text-white p-6 relative">
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 p-2 bg-emerald-950/60 hover:bg-emerald-950 text-white rounded-full transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center justify-between gap-3 mb-4 pb-2 border-b border-emerald-800/60">
+              <button
+                type="button"
+                onClick={onClose}
+                className="inline-flex items-center gap-2 px-3 py-1.5 bg-emerald-800/80 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all border border-emerald-700/60 active:scale-95 shadow-sm"
+              >
+                <ArrowLeft className="w-4 h-4 text-emerald-300" />
+                <span>Back to Profiles</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={onClose}
+                className="p-1.5 bg-emerald-950/60 hover:bg-emerald-950 text-emerald-200 hover:text-white rounded-full transition-colors"
+                title="Close (Escape)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-5">
-              <div className="relative">
+              <div
+                className="relative cursor-pointer group"
+                onClick={() =>
+                  openLightboxWithImages([
+                    {
+                      url: worker.avatarUrl,
+                      title: `${worker.fullName} — Profile Headshot`,
+                      subtitle: `${worker.role} • ${worker.city}`,
+                      isVerified: worker.isVerified,
+                    },
+                    ...(worker.candidatePhotos?.fullLengthPhoto
+                      ? [
+                          {
+                            url: worker.candidatePhotos.fullLengthPhoto,
+                            title: `${worker.fullName} — Full Length View`,
+                            subtitle: "Standing Appearance & Posture",
+                            isVerified: true,
+                          },
+                        ]
+                      : []),
+                    ...(worker.candidatePhotos?.workActionPhoto
+                      ? [
+                          {
+                            url: worker.candidatePhotos.workActionPhoto,
+                            title: `${worker.fullName} — Work Uniform / In-Action`,
+                            subtitle: "On-Duty Attire & Readiness",
+                            isVerified: true,
+                          },
+                        ]
+                      : []),
+                  ])
+                }
+                title="Click to view full-size photo"
+              >
                 <img
                   src={worker.avatarUrl}
                   alt={worker.fullName}
-                  className="w-24 h-24 rounded-2xl object-cover border-2 border-emerald-400/80 shadow-lg"
+                  className="w-24 h-24 rounded-2xl object-cover border-2 border-emerald-400/80 shadow-lg group-hover:opacity-90 group-hover:scale-[1.02] transition-all"
                 />
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 rounded-2xl flex items-center justify-center transition-opacity">
+                  <Camera className="w-6 h-6 text-white drop-shadow-md" />
+                </div>
                 {worker.isVerified && (
                   <div className="absolute -bottom-2 -right-2 bg-emerald-500 text-slate-950 p-1.5 rounded-xl shadow-md flex items-center gap-1 text-[10px] font-black">
                     <ShieldCheck className="w-4 h-4" />
@@ -639,6 +726,15 @@ export const WorkerProfileModal: React.FC<WorkerProfileModalProps> = ({
         onClose={() => setIsDocumentVaultModalOpen(false)}
         workerName={worker.fullName}
         workerRole={worker.role}
+      />
+
+      {/* Fullscreen Photo Lightbox Modal with Back Button */}
+      <ImageLightboxModal
+        isOpen={isLightboxOpen}
+        onClose={() => setIsLightboxOpen(false)}
+        images={lightboxImages}
+        initialIndex={lightboxIndex}
+        backLabel="Back to Profile"
       />
     </>
   );

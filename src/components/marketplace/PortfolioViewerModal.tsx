@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { PortfolioItem, WorkerProfile } from "../../types/marketplace";
 import {
   X,
+  ArrowLeft,
   Image as ImageIcon,
   FileText,
   ShieldCheck,
@@ -37,6 +38,31 @@ export const PortfolioViewerModal: React.FC<PortfolioViewerModalProps> = ({
   workerName,
   workerRole,
 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const stateObj = { portfolioViewerOpen: true };
+    window.history.pushState(stateObj, "");
+
+    const handlePopState = () => {
+      onClose();
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen || !item) return null;
 
   const isImage = item.fileType === "image" || (!item.url.endsWith(".pdf") && !item.category.includes("Document") && !item.category.includes("Letter") && !item.category.includes("Clearance"));
@@ -47,6 +73,16 @@ export const PortfolioViewerModal: React.FC<PortfolioViewerModalProps> = ({
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-950 via-teal-900 to-slate-950 text-white p-5 flex items-center justify-between border-b border-emerald-800">
           <div className="flex items-center space-x-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-800/90 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all border border-emerald-600/60 active:scale-95 shadow-sm mr-2"
+              title="Return to Profile"
+            >
+              <ArrowLeft className="w-4 h-4 text-emerald-300" />
+              <span>Back</span>
+            </button>
+
             <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shrink-0">
               {isImage ? <Camera className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
             </div>
@@ -71,6 +107,7 @@ export const PortfolioViewerModal: React.FC<PortfolioViewerModalProps> = ({
           <button
             onClick={onClose}
             className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors"
+            title="Close (Escape)"
           >
             <X className="w-5 h-5" />
           </button>

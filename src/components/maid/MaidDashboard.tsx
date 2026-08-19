@@ -1,8 +1,9 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { usePlatform } from "../../context/PlatformContext";
 import { JobRecord, calculateAge } from "../../types/platform";
 import { ALL_ZIMBABWE_CITIES, getSuburbsForCity } from "../../data/zimbabweLocations";
 import { MediaUploadComponent } from "../media/MediaUploadComponent";
+import { ImageLightboxModal, LightboxImageItem } from "../common/ImageLightboxModal";
 import {
   User,
   Briefcase,
@@ -33,6 +34,7 @@ import {
   Camera,
   Sparkles,
   X,
+  ArrowLeft,
   Wallet,
   CreditCard,
   RefreshCw,
@@ -147,6 +149,59 @@ export const MaidDashboard: React.FC = () => {
     checkoutUrl: string;
   } | null>(null);
   const [paymentSuccessMessage, setPaymentSuccessMessage] = useState<string | null>(null);
+
+  // Lightbox for Maid's photos and certificates
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<LightboxImageItem[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
+  // Browser Back Button & Escape key support for Maid Modals & Lightbox
+  useEffect(() => {
+    if (!selectedJobToApply && !isAddFundsOpen) return;
+
+    const stateObj = {
+      maidModalOpen: true,
+      selectedJobId: selectedJobToApply?.id,
+      isAddFundsOpen,
+    };
+    window.history.pushState(stateObj, "");
+
+    const handlePopState = () => {
+      if (isLightboxOpen) {
+        setIsLightboxOpen(false);
+      } else if (selectedJobToApply) {
+        setSelectedJobToApply(null);
+      } else if (isAddFundsOpen) {
+        setIsAddFundsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isLightboxOpen) {
+          setIsLightboxOpen(false);
+        } else if (selectedJobToApply) {
+          setSelectedJobToApply(null);
+        } else if (isAddFundsOpen) {
+          setIsAddFundsOpen(false);
+        }
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedJobToApply, isAddFundsOpen, isLightboxOpen]);
+
+  const openDocLightbox = (images: LightboxImageItem[], index = 0) => {
+    setLightboxImages(images);
+    setLightboxIndex(index);
+    setIsLightboxOpen(true);
+  };
 
   // Available skills catalogue
   const ALL_SKILLS = [
@@ -916,7 +971,22 @@ export const MaidDashboard: React.FC = () => {
                       Primary
                     </span>
                   </div>
-                  <div className="relative h-48 rounded-xl overflow-hidden bg-slate-200 border border-slate-300">
+                  <div
+                    onClick={() =>
+                      openDocLightbox([
+                        {
+                          url:
+                            currentMaidProfile?.profilePhoto ||
+                            "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=400",
+                          title: "Primary Profile Avatar",
+                          subtitle: `${currentMaidProfile?.firstName || firstName} ${currentMaidProfile?.surname || surname}`,
+                          isVerified: currentMaidProfile?.isVerified,
+                        },
+                      ])
+                    }
+                    className="relative h-48 rounded-xl overflow-hidden bg-slate-200 border border-slate-300 cursor-pointer group"
+                    title="Click to view full image"
+                  >
                     <img
                       src={
                         currentMaidProfile?.profilePhoto ||
@@ -924,8 +994,11 @@ export const MaidDashboard: React.FC = () => {
                       }
                       alt="Avatar"
                       referrerPolicy="no-referrer"
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                     />
+                    <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                      <Eye className="w-6 h-6 text-white drop-shadow-md" />
+                    </div>
                   </div>
                   <p className="text-[11px] text-slate-500">
                     Clear headshot looking directly at the camera with good lighting.
@@ -974,14 +1047,35 @@ export const MaidDashboard: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  <div className="relative h-48 rounded-xl overflow-hidden bg-slate-200 border border-slate-300 flex items-center justify-center">
+                  <div
+                    onClick={() => {
+                      if (currentMaidProfile?.additionalPhoto1) {
+                        openDocLightbox([
+                          {
+                            url: currentMaidProfile.additionalPhoto1,
+                            title: additionalPhoto1Title || "Work Attire & Uniform",
+                            subtitle: "Professional Work Setting",
+                            isVerified: true,
+                          },
+                        ]);
+                      }
+                    }}
+                    className={`relative h-48 rounded-xl overflow-hidden bg-slate-200 border border-slate-300 flex items-center justify-center ${
+                      currentMaidProfile?.additionalPhoto1 ? "cursor-pointer group" : ""
+                    }`}
+                  >
                     {currentMaidProfile?.additionalPhoto1 ? (
-                      <img
-                        src={currentMaidProfile.additionalPhoto1}
-                        alt="Photo 2"
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover"
-                      />
+                      <>
+                        <img
+                          src={currentMaidProfile.additionalPhoto1}
+                          alt="Photo 2"
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                          <Eye className="w-6 h-6 text-white drop-shadow-md" />
+                        </div>
+                      </>
                     ) : (
                       <div className="text-center p-4 space-y-1">
                         <Camera className="w-8 h-8 text-slate-400 mx-auto" />
@@ -1051,14 +1145,35 @@ export const MaidDashboard: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  <div className="relative h-48 rounded-xl overflow-hidden bg-slate-200 border border-slate-300 flex items-center justify-center">
+                  <div
+                    onClick={() => {
+                      if (currentMaidProfile?.additionalPhoto2) {
+                        openDocLightbox([
+                          {
+                            url: currentMaidProfile.additionalPhoto2,
+                            title: additionalPhoto2Title || "Skill Demonstration",
+                            subtitle: "Domestic & Childcare Expertise",
+                            isVerified: true,
+                          },
+                        ]);
+                      }
+                    }}
+                    className={`relative h-48 rounded-xl overflow-hidden bg-slate-200 border border-slate-300 flex items-center justify-center ${
+                      currentMaidProfile?.additionalPhoto2 ? "cursor-pointer group" : ""
+                    }`}
+                  >
                     {currentMaidProfile?.additionalPhoto2 ? (
-                      <img
-                        src={currentMaidProfile.additionalPhoto2}
-                        alt="Photo 3"
-                        referrerPolicy="no-referrer"
-                        className="w-full h-full object-cover"
-                      />
+                      <>
+                        <img
+                          src={currentMaidProfile.additionalPhoto2}
+                          alt="Photo 3"
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                        />
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                          <Eye className="w-6 h-6 text-white drop-shadow-md" />
+                        </div>
+                      </>
                     ) : (
                       <div className="text-center p-4 space-y-1">
                         <Camera className="w-8 h-8 text-slate-400 mx-auto" />
@@ -1249,14 +1364,22 @@ export const MaidDashboard: React.FC = () => {
                     </div>
 
                     <div className="flex items-center justify-between pt-2 border-t border-slate-200/80">
-                      <a
-                        href={doc.fileUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-bold text-emerald-700 hover:underline flex items-center gap-1"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          openDocLightbox([
+                            {
+                              url: doc.fileUrl,
+                              title: doc.documentTitle || doc.documentType,
+                              subtitle: `Document Type: ${doc.documentType} • Status: ${doc.verificationStatus}`,
+                              isVerified: doc.verificationStatus === "Verified",
+                            },
+                          ])
+                        }
+                        className="text-xs font-bold text-emerald-700 hover:text-emerald-800 hover:underline flex items-center gap-1"
                       >
                         <Eye className="w-3.5 h-3.5" /> View Document
-                      </a>
+                      </button>
                       <button
                         onClick={() => deleteWorkerDocument(doc.id)}
                         className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg transition-colors"
@@ -1505,12 +1628,25 @@ export const MaidDashboard: React.FC = () => {
       {selectedJobToApply && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative my-8 space-y-6">
-            <button
-              onClick={() => setSelectedJobToApply(null)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <button
+                type="button"
+                onClick={() => setSelectedJobToApply(null)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all active:scale-95 border border-slate-200"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
+                <span>Back</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedJobToApply(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
+                title="Close (Escape)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <div className="space-y-1">
               <div className="text-xs font-bold text-emerald-700 uppercase">Apply for Vacancy</div>
@@ -1584,12 +1720,25 @@ export const MaidDashboard: React.FC = () => {
       {isAddFundsOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative my-8 space-y-6">
-            <button
-              onClick={() => setIsAddFundsOpen(false)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsAddFundsOpen(false)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all active:scale-95 border border-slate-200"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
+                <span>Back</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsAddFundsOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
+                title="Close (Escape)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <div className="space-y-1">
               <div className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-full">
@@ -1713,6 +1862,15 @@ export const MaidDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Lightbox for Maid's uploaded Photos and Documents */}
+      <ImageLightboxModal
+        isOpen={isLightboxOpen}
+        onClose={() => setIsLightboxOpen(false)}
+        images={lightboxImages}
+        initialIndex={lightboxIndex}
+        backLabel="Back to Dashboard"
+      />
     </div>
   );
 };

@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { usePlatform } from "../../context/PlatformContext";
 import { PublicMaidProfile, JobRecord, calculateAge } from "../../types/platform";
 import { ALL_ZIMBABWE_CITIES, getSuburbsForCity } from "../../data/zimbabweLocations";
 import { MediaUploadComponent } from "../media/MediaUploadComponent";
+import { ImageLightboxModal, LightboxImageItem } from "../common/ImageLightboxModal";
 import {
   Wallet,
   PlusCircle,
@@ -28,6 +29,7 @@ import {
   Star,
   Check,
   X,
+  ArrowLeft,
   CreditCard,
   Building,
   Home,
@@ -82,6 +84,11 @@ export const EmployerDashboard: React.FC = () => {
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [subscriptionMessage, setSubscriptionMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // Lightbox for Maid and Candidate Photos
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState<LightboxImageItem[]>([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
+
   // Add Funds Modal State (Paynow Integration)
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState<number>(50);
@@ -94,6 +101,54 @@ export const EmployerDashboard: React.FC = () => {
     checkoutUrl: string;
   } | null>(null);
   const [paymentSuccessMessage, setPaymentSuccessMessage] = useState<string | null>(null);
+
+  // Browser Back Button & Escape key support for Maid Profile & Add Funds Modals
+  useEffect(() => {
+    if (!selectedMaid && !isAddFundsOpen) return;
+
+    const stateObj = {
+      employerModalOpen: true,
+      selectedMaidId: selectedMaid?.id,
+      isAddFundsOpen,
+    };
+    window.history.pushState(stateObj, "");
+
+    const handlePopState = () => {
+      if (isLightboxOpen) {
+        setIsLightboxOpen(false);
+      } else if (selectedMaid) {
+        setSelectedMaid(null);
+      } else if (isAddFundsOpen) {
+        setIsAddFundsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (isLightboxOpen) {
+          setIsLightboxOpen(false);
+        } else if (selectedMaid) {
+          setSelectedMaid(null);
+        } else if (isAddFundsOpen) {
+          setIsAddFundsOpen(false);
+        }
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [selectedMaid, isAddFundsOpen, isLightboxOpen]);
+
+  const openMaidLightbox = (images: LightboxImageItem[], index = 0) => {
+    setLightboxImages(images);
+    setLightboxIndex(index);
+    setIsLightboxOpen(true);
+  };
 
   // Job Creation Form State
   const [jobTitle, setJobTitle] = useState("House Maid & Live-in Nanny");
@@ -1322,21 +1377,74 @@ export const EmployerDashboard: React.FC = () => {
       {selectedMaid && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative my-8 space-y-6">
-            <button
-              onClick={() => setSelectedMaid(null)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            {/* Top Bar with Back Button & Close */}
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <button
+                type="button"
+                onClick={() => setSelectedMaid(null)}
+                className="inline-flex items-center gap-2 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold transition-all active:scale-95 border border-slate-200"
+              >
+                <ArrowLeft className="w-4 h-4 text-slate-600" />
+                <span>Back to Maids</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedMaid(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
+                title="Close (Escape)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             {/* Profile Header */}
             <div className="flex items-start gap-4">
-              <img
-                src={selectedMaid.profilePhoto}
-                alt={selectedMaid.fullName}
-                referrerPolicy="no-referrer"
-                className="w-20 h-20 rounded-2xl object-cover border-2 border-emerald-500 shadow-md flex-shrink-0"
-              />
+              <div
+                className="relative cursor-pointer group flex-shrink-0"
+                onClick={() =>
+                  openMaidLightbox([
+                    {
+                      url: selectedMaid.profilePhoto,
+                      title: `${selectedMaid.fullName} — Facial Portrait`,
+                      subtitle: `${selectedMaid.location} • ${selectedMaid.age} yrs old`,
+                      isVerified: selectedMaid.isVerified,
+                    },
+                    ...(selectedMaid.additionalPhoto1
+                      ? [
+                          {
+                            url: selectedMaid.additionalPhoto1,
+                            title: `${selectedMaid.fullName} — Work Uniform`,
+                            subtitle: "Work Attire & Uniform Readiness",
+                            isVerified: true,
+                          },
+                        ]
+                      : []),
+                    ...(selectedMaid.additionalPhoto2
+                      ? [
+                          {
+                            url: selectedMaid.additionalPhoto2,
+                            title: `${selectedMaid.fullName} — Demonstration`,
+                            subtitle: "Practical Housekeeping Demonstration",
+                            isVerified: true,
+                          },
+                        ]
+                      : []),
+                  ])
+                }
+                title="Click to view full photo"
+              >
+                <img
+                  src={selectedMaid.profilePhoto}
+                  alt={selectedMaid.fullName}
+                  referrerPolicy="no-referrer"
+                  className="w-20 h-20 rounded-2xl object-cover border-2 border-emerald-500 shadow-md group-hover:opacity-90 transition-opacity"
+                />
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 rounded-2xl flex items-center justify-center transition-opacity">
+                  <Camera className="w-5 h-5 text-white drop-shadow-sm" />
+                </div>
+              </div>
+
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-black text-slate-900 tracking-tight">{selectedMaid.fullName}</h2>
@@ -1383,7 +1491,7 @@ export const EmployerDashboard: React.FC = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
                     <Camera className="w-3.5 h-3.5 text-emerald-600" />
-                    Verified Work Portfolio & Demonstration Photos
+                    Verified Work Portfolio & Demonstration Photos (Click to View)
                   </span>
                   <span className="text-[10px] font-bold text-emerald-700 bg-white px-2 py-0.5 rounded-full border border-emerald-200">
                     {(selectedMaid.portfolio?.length || 0) + (selectedMaid.additionalPhoto1 ? 1 : 0) + (selectedMaid.additionalPhoto2 ? 1 : 0)} Photos
@@ -1391,8 +1499,21 @@ export const EmployerDashboard: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1">
-                  {selectedMaid.portfolio?.map((item) => (
-                    <div key={item.id} className="relative rounded-xl overflow-hidden group bg-white border border-emerald-100 shadow-sm">
+                  {selectedMaid.portfolio?.map((item, idx) => (
+                    <div
+                      key={item.id}
+                      onClick={() =>
+                        openMaidLightbox([
+                          {
+                            url: item.imageUrl,
+                            title: item.title,
+                            subtitle: `${selectedMaid.fullName} • ${item.category}`,
+                            isVerified: true,
+                          },
+                        ])
+                      }
+                      className="relative rounded-xl overflow-hidden group bg-white border border-emerald-100 shadow-sm cursor-pointer hover:ring-2 hover:ring-emerald-500"
+                    >
                       <img
                         src={item.imageUrl}
                         alt={item.title}
@@ -1407,7 +1528,19 @@ export const EmployerDashboard: React.FC = () => {
                   ))}
 
                   {selectedMaid.additionalPhoto1 && (
-                    <div className="relative rounded-xl overflow-hidden group bg-white border border-emerald-100 shadow-sm">
+                    <div
+                      onClick={() =>
+                        openMaidLightbox([
+                          {
+                            url: selectedMaid.additionalPhoto1!,
+                            title: `${selectedMaid.fullName} — Work Uniform`,
+                            subtitle: "Work Attire & Professional Uniform",
+                            isVerified: true,
+                          },
+                        ])
+                      }
+                      className="relative rounded-xl overflow-hidden group bg-white border border-emerald-100 shadow-sm cursor-pointer hover:ring-2 hover:ring-emerald-500"
+                    >
                       <img
                         src={selectedMaid.additionalPhoto1}
                         alt="Work Uniform"
@@ -1424,7 +1557,19 @@ export const EmployerDashboard: React.FC = () => {
                   )}
 
                   {selectedMaid.additionalPhoto2 && (
-                    <div className="relative rounded-xl overflow-hidden group bg-white border border-emerald-100 shadow-sm">
+                    <div
+                      onClick={() =>
+                        openMaidLightbox([
+                          {
+                            url: selectedMaid.additionalPhoto2!,
+                            title: `${selectedMaid.fullName} — Skill Demonstration`,
+                            subtitle: "Practical Domestic Demonstration",
+                            isVerified: true,
+                          },
+                        ])
+                      }
+                      className="relative rounded-xl overflow-hidden group bg-white border border-emerald-100 shadow-sm cursor-pointer hover:ring-2 hover:ring-emerald-500"
+                    >
                       <img
                         src={selectedMaid.additionalPhoto2}
                         alt="Skill in Action"
@@ -1552,12 +1697,25 @@ export const EmployerDashboard: React.FC = () => {
       {isAddFundsOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative my-8 space-y-6">
-            <button
-              onClick={() => setIsAddFundsOpen(false)}
-              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsAddFundsOpen(false)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all active:scale-95 border border-slate-200"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
+                <span>Back</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsAddFundsOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
+                title="Close (Escape)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
 
             <div className="space-y-1">
               <div className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-full">
@@ -1667,6 +1825,15 @@ export const EmployerDashboard: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Lightbox for Maid and Candidate Photos */}
+      <ImageLightboxModal
+        isOpen={isLightboxOpen}
+        onClose={() => setIsLightboxOpen(false)}
+        images={lightboxImages}
+        initialIndex={lightboxIndex}
+        backLabel="Back to Profile"
+      />
     </div>
   );
 };

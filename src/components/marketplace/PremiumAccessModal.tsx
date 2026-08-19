@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { PAYMENT_GATEWAY_ASSETS } from "../common/PaymentBadges";
 import {
   ShieldCheck,
   Lock,
   CheckCircle2,
   X,
+  ArrowLeft,
   Smartphone,
   Copy,
   Check,
@@ -33,6 +34,31 @@ export const PremiumAccessModal: React.FC<PremiumAccessModalProps> = ({
   const [proofFileName, setProofFileName] = useState<string | null>(null);
   const [paymentSubmitted, setPaymentSubmitted] = useState(false);
   const [isActivatingDemo, setIsActivatingDemo] = useState(false);
+
+  // Browser Back Button & Escape key support
+  useEffect(() => {
+    if (!isOpen) return;
+
+    window.history.pushState({ premiumModalOpen: true }, "");
+
+    const handlePopState = () => {
+      onClose();
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -75,12 +101,24 @@ export const PremiumAccessModal: React.FC<PremiumAccessModalProps> = ({
       <div className="bg-white border border-slate-200 rounded-3xl max-w-xl w-full overflow-hidden shadow-2xl relative my-8 animate-in fade-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-emerald-950 text-white p-6 relative">
-          <button
-            onClick={onClose}
-            className="absolute top-4 right-4 p-2 bg-emerald-950/60 hover:bg-emerald-950 text-white rounded-full transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center justify-between mb-3">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs font-bold transition-all border border-white/20 active:scale-95"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back</span>
+            </button>
+
+            <button
+              onClick={onClose}
+              className="p-1.5 bg-emerald-950/60 hover:bg-emerald-950 text-white rounded-full transition-colors"
+              title="Close (Escape)"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
           <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-amber-400 text-slate-950 rounded-full text-xs font-black uppercase tracking-wider mb-2">
             <Sparkles className="w-3.5 h-3.5 fill-slate-950" />

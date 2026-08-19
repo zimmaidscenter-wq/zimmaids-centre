@@ -1,6 +1,7 @@
 import React, { useState } from "react";
-import { Camera, Maximize2, ShieldCheck, User, Sparkles, CheckCircle2, ChevronLeft, ChevronRight, X } from "lucide-react";
+import { Camera, Maximize2, ShieldCheck, User, Sparkles, CheckCircle2, ChevronLeft, ChevronRight, X, ArrowLeft } from "lucide-react";
 import { WorkerProfile } from "../../types/marketplace";
+import { ImageLightboxModal, LightboxImageItem } from "../common/ImageLightboxModal";
 
 interface CandidatePhotoGalleryProps {
   worker: WorkerProfile;
@@ -156,59 +157,20 @@ export const CandidatePhotoGallery: React.FC<CandidatePhotoGalleryProps> = ({
         })}
       </div>
 
-      {/* Fullscreen Lightbox */}
-      {isFullscreenOpen && (
-        <div
-          onClick={() => setIsFullscreenOpen(false)}
-          className="fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-slate-900 border border-slate-800 rounded-3xl max-w-3xl w-full overflow-hidden shadow-2xl space-y-3 p-4 text-white"
-          >
-            <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-              <div>
-                <h4 className="font-black text-sm">{worker.fullName} — {currentPhoto.label}</h4>
-                <p className="text-xs text-slate-400">{currentPhoto.sublabel}</p>
-              </div>
-              <button
-                onClick={() => setIsFullscreenOpen(false)}
-                className="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="max-h-[70vh] flex items-center justify-center bg-black/60 rounded-2xl p-2">
-              <img
-                src={currentPhoto.url}
-                alt={currentPhoto.label}
-                className="max-h-[65vh] w-auto max-w-full object-contain rounded-xl"
-              />
-            </div>
-
-            <div className="flex items-center justify-between text-xs pt-1">
-              <span className="text-slate-400 font-mono">
-                View {activeIndex + 1} of {photoList.length}
-              </span>
-              <div className="flex space-x-2">
-                <button
-                  onClick={handlePrev}
-                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold"
-                >
-                  Previous View
-                </button>
-                <button
-                  onClick={handleNext}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold"
-                >
-                  Next View
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Fullscreen Lightbox with Back Button & Browser popstate support */}
+      <ImageLightboxModal
+        isOpen={isFullscreenOpen}
+        onClose={() => setIsFullscreenOpen(false)}
+        images={photoList.map((p) => ({
+          url: p.url,
+          title: `${worker.fullName} — ${p.label}`,
+          subtitle: p.sublabel,
+          description: p.description,
+          isVerified: true,
+        }))}
+        initialIndex={activeIndex}
+        backLabel="Back to Profile"
+      />
     </div>
   );
 };
