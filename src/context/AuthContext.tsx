@@ -232,10 +232,10 @@ const INITIAL_JOB_POSTINGS = [
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Current session default: Admin for rich evaluation experience
-  const [currentUser, setCurrentUser] = useState<UserSession | null>(PRECONFIGURED_USERS.Admin);
+  // New visitors land as unauthenticated guests so they can register or sign in
+  const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalTab, setAuthModalTab] = useState<"signin" | "signup" | "demo" | "agency-signup">("demo");
+  const [authModalTab, setAuthModalTab] = useState<"signin" | "signup" | "demo" | "agency-signup">("signup");
 
   // Agencies Database
   const [agencies, setAgencies] = useState<AgencyProfile[]>(INITIAL_AGENCIES);

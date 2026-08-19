@@ -197,7 +197,7 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Main Navigation Row with Right-Aligned Sign In / Sign Up Portal */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4">
         {/* Brand Logo & Name */}
-        <div className="flex items-center space-x-3 cursor-pointer group shrink-0" onClick={() => setActiveTab("marketplace")}>
+        <div className="flex items-center space-x-3 cursor-pointer group shrink-0" onClick={() => setActiveTab("landing")}>
           <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden border-2 border-emerald-400/90 bg-white shadow-md shadow-emerald-950/40 shrink-0 group-hover:scale-105 transition-transform duration-200">
             <img
               src={ZMC_OFFICIAL_LOGO}
@@ -216,48 +216,22 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         </div>
 
-        {/* Navigation Tabs Filtered by User Role */}
+        {/* Navigation Tabs */}
         <nav className="hidden md:flex items-center space-x-1 bg-emerald-900/50 p-1 rounded-xl border border-emerald-800/60 overflow-x-auto max-w-3xl">
-          {/* Employer Dashboard */}
+          {/* Home */}
           <button
-            onClick={() => setActiveTab("employer" as any)}
+            onClick={() => setActiveTab("landing")}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "employer" || activeTab === "jobs"
-                ? "bg-emerald-500 text-slate-950 shadow-md font-black"
+              activeTab === "landing"
+                ? "bg-emerald-500 text-slate-950 shadow-md font-extrabold"
                 : "text-emerald-200 hover:bg-emerald-800/50 hover:text-white"
             }`}
           >
-            <Building2 className="w-3.5 h-3.5" />
-            <span>Employer Portal</span>
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Home</span>
           </button>
 
-          {/* Maid / Worker Dashboard */}
-          <button
-            onClick={() => setActiveTab("maid" as any)}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "maid" || activeTab === "worker"
-                ? "bg-emerald-500 text-slate-950 shadow-md font-black"
-                : "text-emerald-200 hover:bg-emerald-800/50 hover:text-white"
-            }`}
-          >
-            <UserCheck className="w-3.5 h-3.5" />
-            <span>Maid / Worker Portal</span>
-          </button>
-
-          {/* Admin Dashboard */}
-          <button
-            onClick={() => setActiveTab("admin")}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "admin"
-                ? "bg-amber-400 text-slate-950 shadow-md font-black"
-                : "text-amber-200 hover:bg-emerald-800/50 hover:text-white"
-            }`}
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
-            <span>Admin Center</span>
-          </button>
-
-          {/* Staff Directory */}
+          {/* Find Maids & Staff */}
           <button
             onClick={() => setActiveTab("marketplace")}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
@@ -267,34 +241,90 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>Directory</span>
+            <span>Find Maids</span>
           </button>
 
-          {/* WhatsApp Ingestion */}
+          {/* Browse Jobs */}
           <button
-            onClick={() => setActiveTab("whatsapp-upload")}
+            onClick={() => setActiveTab("jobs")}
             className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "whatsapp-upload"
-                ? "bg-amber-400 text-slate-950 shadow-md font-bold"
-                : "text-amber-200 hover:bg-emerald-800/50 hover:text-white"
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-300 fill-amber-300" />
-            <span>WhatsApp Ingest</span>
-          </button>
-
-          {/* Payments & Paynow */}
-          <button
-            onClick={() => setActiveTab("payments")}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "payments"
-                ? "bg-emerald-500 text-slate-950 shadow-md"
+              activeTab === "jobs"
+                ? "bg-emerald-500 text-slate-950 shadow-md font-extrabold"
                 : "text-emerald-200 hover:bg-emerald-800/50 hover:text-white"
             }`}
           >
-            <CreditCard className="w-3.5 h-3.5" />
-            <span>Paynow Ledger</span>
+            <Briefcase className="w-3.5 h-3.5" />
+            <span>Browse Jobs</span>
           </button>
+
+          {/* Agencies */}
+          <button
+            onClick={() => setActiveTab("agency")}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+              activeTab === "agency"
+                ? "bg-teal-400 text-slate-950 shadow-md font-extrabold"
+                : "text-teal-200 hover:bg-emerald-800/50 hover:text-white"
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>Agencies</span>
+          </button>
+
+          {/* Reviews & How it works */}
+          <button
+            onClick={() => setActiveTab("reviews")}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+              activeTab === "reviews"
+                ? "bg-emerald-500 text-slate-950 shadow-md font-extrabold"
+                : "text-emerald-200 hover:bg-emerald-800/50 hover:text-white"
+            }`}
+          >
+            <Star className="w-3.5 h-3.5" />
+            <span>Reviews</span>
+          </button>
+
+          {/* User-Specific Active Portal */}
+          {currentUser?.role === "Employer" && (
+            <button
+              onClick={() => setActiveTab("employer" as any)}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                activeTab === "employer"
+                  ? "bg-amber-400 text-slate-950 shadow-md font-black"
+                  : "text-amber-300 hover:bg-emerald-800/50 hover:text-white"
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>Employer Portal</span>
+            </button>
+          )}
+
+          {currentUser?.role === "Worker" && (
+            <button
+              onClick={() => setActiveTab("maid" as any)}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                activeTab === "maid" || activeTab === "worker"
+                  ? "bg-amber-400 text-slate-950 shadow-md font-black"
+                  : "text-amber-300 hover:bg-emerald-800/50 hover:text-white"
+              }`}
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>Maid Portal</span>
+            </button>
+          )}
+
+          {currentUser?.role === "Admin" && (
+            <button
+              onClick={() => setActiveTab("admin")}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+                activeTab === "admin"
+                  ? "bg-amber-400 text-slate-950 shadow-md font-black"
+                  : "text-amber-200 hover:bg-emerald-800/50 hover:text-white"
+              }`}
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-amber-300" />
+              <span>Admin Center</span>
+            </button>
+          )}
         </nav>
 
         {/* RIGHT SIDE: Dedicated Sign In, Referral Program, Notifications & User Portal */}
@@ -461,7 +491,7 @@ export const Header: React.FC<HeaderProps> = ({
 
               <button
                 onClick={() => {
-                  setAuthModalTab("register");
+                  setAuthModalTab("signup");
                   setIsAuthModalOpen(true);
                 }}
                 className="flex items-center space-x-1.5 px-4 py-2 bg-gradient-to-r from-emerald-400 to-teal-400 hover:from-emerald-300 hover:to-teal-300 text-slate-950 font-black text-xs rounded-xl transition-all shadow-md active:scale-95 border border-emerald-300/60"
@@ -479,11 +509,11 @@ export const Header: React.FC<HeaderProps> = ({
         <button
           onClick={() => setActiveTab("landing")}
           className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap ${
-            activeTab === "landing" ? "bg-amber-400 text-slate-950 font-bold" : "text-amber-200"
+            activeTab === "landing" ? "bg-emerald-400 text-slate-950 font-bold" : "text-emerald-200"
           }`}
         >
           <Sparkles className="w-3 h-3" />
-          <span>Showcase</span>
+          <span>Home</span>
         </button>
 
         <button
@@ -492,28 +522,8 @@ export const Header: React.FC<HeaderProps> = ({
             activeTab === "marketplace" ? "bg-emerald-500 text-slate-950 font-bold" : "text-emerald-200"
           }`}
         >
-          <Building2 className="w-3 h-3" />
-          <span>Staff</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("worker")}
-          className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap ${
-            activeTab === "worker" ? "bg-emerald-500 text-slate-950 font-bold" : "text-emerald-200"
-          }`}
-        >
-          <UserCheck className="w-3 h-3" />
-          <span>Workers</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("agency")}
-          className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap ${
-            activeTab === "agency" ? "bg-teal-400 text-slate-950 font-bold" : "text-teal-200"
-          }`}
-        >
-          <Building2 className="w-3 h-3" />
-          <span>Agencies</span>
+          <Users className="w-3 h-3" />
+          <span>Find Maids</span>
         </button>
 
         <button
@@ -527,6 +537,26 @@ export const Header: React.FC<HeaderProps> = ({
         </button>
 
         <button
+          onClick={() => setActiveTab("agency")}
+          className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap ${
+            activeTab === "agency" ? "bg-teal-400 text-slate-950 font-bold" : "text-teal-200"
+          }`}
+        >
+          <Building2 className="w-3 h-3" />
+          <span>Agencies</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("reviews")}
+          className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap ${
+            activeTab === "reviews" ? "bg-emerald-500 text-slate-950 font-bold" : "text-emerald-200"
+          }`}
+        >
+          <Star className="w-3 h-3" />
+          <span>Reviews</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab("search")}
           className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap ${
             activeTab === "search" ? "bg-emerald-500 text-slate-950 font-bold" : "text-emerald-200"
@@ -534,16 +564,6 @@ export const Header: React.FC<HeaderProps> = ({
         >
           <Search className="w-3 h-3" />
           <span>Search</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab("payments")}
-          className={`flex items-center space-x-1 px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap ${
-            activeTab === "payments" ? "bg-emerald-500 text-slate-950 font-bold" : "text-emerald-200"
-          }`}
-        >
-          <CreditCard className="w-3 h-3" />
-          <span>Payments</span>
         </button>
 
         {currentUser?.role === "Admin" && (

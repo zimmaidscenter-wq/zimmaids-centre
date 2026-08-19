@@ -37,7 +37,7 @@ import { UserRole, CityLocation, WorkerProfile, PlacementFeeRecord } from "./typ
 export default function App() {
   const [activeTab, setActiveTab] = useState<
     "landing" | "architecture" | "employer" | "maid" | "marketplace" | "worker" | "agency" | "jobs" | "search" | "whatsapp" | "whatsapp-upload" | "ai-studio" | "payments" | "admin" | "reviews" | "reports"
-  >("employer");
+  >("landing");
 
   const [selectedRole, setSelectedRole] = useState<UserRole>("Domestic worker");
   const [selectedCity, setSelectedCity] = useState<CityLocation>("Harare");
