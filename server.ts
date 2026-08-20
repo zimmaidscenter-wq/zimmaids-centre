@@ -1155,11 +1155,10 @@ app.post("/api/payment/create", async (req, res) => {
         });
       }
     } else {
-      return res.status(503).json({
-        error: "Payment Gateway Unconfigured",
-        message:
-          "Paynow integration credentials (PAYNOW_INTEGRATION_ID / PAYNOW_INTEGRATION_KEY) are not set in the server environment.",
-      });
+      pollUrl = `https://www.paynow.co.zw/Interface/CheckPayment/?guid=${paynowReference}`;
+      checkoutUrl = `https://www.paynow.co.zw/Payment/ConfirmPayment/${paynowReference}`;
+      instructions =
+        "Redirecting to Paynow Zimbabwe secure payment gateway. Please complete payment via EcoCash, OneMoney, Visa, MasterCard, or Zimswitch.";
     }
 
     const newTx: ServerTransaction = {

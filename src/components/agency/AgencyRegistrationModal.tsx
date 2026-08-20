@@ -59,7 +59,6 @@ export const AgencyRegistrationModal: React.FC<AgencyRegistrationModalProps> = (
 }) => {
   const { registerAgency } = useAuth();
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [copiedNumber, setCopiedNumber] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
@@ -115,12 +114,6 @@ export const AgencyRegistrationModal: React.FC<AgencyRegistrationModalProps> = (
   });
 
   if (!isOpen) return null;
-
-  const handleCopyEcoCashNumber = () => {
-    navigator.clipboard.writeText("+263785458828");
-    setCopiedNumber(true);
-    setTimeout(() => setCopiedNumber(false), 2000);
-  };
 
   const handleAddDocument = (type: AgencyDocumentType) => {
     const newDocName = `${type.replace(/\s+/g, "_")}_${Date.now().toString().slice(-4)}.pdf`;
@@ -642,29 +635,29 @@ export const AgencyRegistrationModal: React.FC<AgencyRegistrationModalProps> = (
                     </div>
                   </div>
 
-                  {/* Official EcoCash Payment Details Box */}
-                  <div className="bg-gradient-to-br from-blue-950 to-slate-900 border-2 border-blue-500/60 rounded-2xl p-4 space-y-3 text-white shadow-md">
+                  {/* Paynow Zimbabwe Payment Details Box */}
+                  <div className="bg-gradient-to-br from-emerald-950 to-slate-900 border-2 border-emerald-500/60 rounded-2xl p-4 space-y-3 text-white shadow-md">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
                         <img
-                          src={PAYMENT_GATEWAY_ASSETS.ecocash}
-                          alt="EcoCash"
+                          src={PAYMENT_GATEWAY_ASSETS.paynow}
+                          alt="Paynow"
                           referrerPolicy="no-referrer"
-                          className="w-7 h-7 rounded-lg object-cover border border-blue-400/40 shrink-0"
+                          className="w-7 h-7 rounded-lg object-contain bg-white p-0.5 border border-emerald-400/40 shrink-0"
                         />
                         <div>
                           <span className="text-xs font-black text-white uppercase tracking-wide flex items-center gap-1.5">
-                            EcoCash Payment Details
-                            <span className="bg-blue-500/30 text-blue-300 text-[9px] px-1.5 py-0.2 rounded font-bold uppercase">
+                            Paynow Zimbabwe Gateway
+                            <span className="bg-emerald-500/30 text-emerald-300 text-[9px] px-1.5 py-0.2 rounded font-bold uppercase">
                               Official
                             </span>
                           </span>
-                          <span className="text-[10px] text-blue-300 font-medium block">
-                            Direct Agency Subscription Escrow
+                          <span className="text-[10px] text-emerald-300 font-medium block">
+                            Direct Agency Subscription Settlement
                           </span>
                         </div>
                       </div>
-                      <span className="text-[10px] bg-blue-900/80 text-blue-200 border border-blue-600/60 font-bold px-2 py-0.5 rounded-full">
+                      <span className="text-[10px] bg-emerald-900/80 text-emerald-200 border border-emerald-600/60 font-bold px-2 py-0.5 rounded-full">
                         $50 USD / mo
                       </span>
                     </div>
@@ -678,26 +671,32 @@ export const AgencyRegistrationModal: React.FC<AgencyRegistrationModalProps> = (
                           className="w-8 h-8 rounded-lg object-cover border border-blue-500/40 shrink-0"
                         />
                         <div>
-                          <span className="text-[10px] uppercase font-bold text-slate-400 block">Gateway</span>
-                          <span className="font-extrabold text-white">EcoCash Mobile</span>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block">Mobile Money</span>
+                          <span className="font-extrabold text-white">EcoCash / OneMoney</span>
                         </div>
                       </div>
-                      <div>
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Recipient Name</span>
-                        <span className="font-extrabold text-emerald-400">Chenjerai</span>
+                      <div className="flex items-center space-x-2.5">
+                        <img
+                          src={PAYMENT_GATEWAY_ASSETS.visaMastercard}
+                          alt="Cards"
+                          referrerPolicy="no-referrer"
+                          className="w-8 h-8 rounded-lg object-cover border border-emerald-500/40 shrink-0"
+                        />
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block">Debit / Credit</span>
+                          <span className="font-extrabold text-emerald-400">Visa / Mastercard</span>
+                        </div>
                       </div>
-                      <div>
-                        <span className="text-[10px] uppercase font-bold text-slate-400 block">EcoCash Number</span>
-                        <div className="flex items-center space-x-1.5 mt-0.5">
-                          <span className="font-black text-amber-300 font-mono">+263 785 458 828</span>
-                          <button
-                            type="button"
-                            onClick={handleCopyEcoCashNumber}
-                            className="p-1 bg-slate-800 hover:bg-slate-700 text-white rounded-md transition-colors border border-slate-700"
-                            title="Copy EcoCash Number"
-                          >
-                            {copiedNumber ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                          </button>
+                      <div className="flex items-center space-x-2.5">
+                        <img
+                          src={PAYMENT_GATEWAY_ASSETS.innbucks}
+                          alt="InnBucks"
+                          referrerPolicy="no-referrer"
+                          className="w-8 h-8 rounded-lg object-cover border border-amber-500/40 shrink-0"
+                        />
+                        <div>
+                          <span className="text-[10px] uppercase font-bold text-slate-400 block">Retail Outlets</span>
+                          <span className="font-extrabold text-amber-300">InnBucks QR</span>
                         </div>
                       </div>
                     </div>

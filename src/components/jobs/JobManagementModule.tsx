@@ -36,7 +36,9 @@ import {
   Users,
   Bed,
   Dog,
-  HeartHandshake
+  HeartHandshake,
+  Send,
+  MessageSquare
 } from "lucide-react";
 import { JobPosting, UserRole, CityLocation, HelperType, PrimaryFocusRole, EmployerHiringRequest } from "../../types/marketplace";
 import { SAMPLE_JOBS } from "../../data/mockData";
@@ -45,6 +47,7 @@ import { EmployerHiringModal } from "./EmployerHiringModal";
 
 interface JobManagementModuleProps {
   currency?: "USD" | "ZWG";
+  onNavigateToMarketplace?: () => void;
 }
 
 // Initial Expanded Job Data
@@ -167,7 +170,7 @@ const JOB_TEMPLATES = [
   }
 ];
 
-export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ currency = "USD" }) => {
+export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ currency = "USD", onNavigateToMarketplace }) => {
   const [jobsList, setJobsList] = useState<JobPosting[]>(INITIAL_JOBS);
   const [activeTab, setActiveTab] = useState<
     "all" | "featured" | "recommended" | "nearby" | "expired" | "drafts" | "calculator" | "templates"
@@ -186,6 +189,42 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
   const [editingJob, setEditingJob] = useState<JobPosting | null>(null);
   const [deletingJobId, setDeletingJobId] = useState<string | null>(null);
   const [notificationMsg, setNotificationMsg] = useState<string | null>(null);
+
+  // Worker Application State
+  const [applyingJob, setApplyingJob] = useState<JobPosting | null>(null);
+  const [isSubmittingApp, setIsSubmittingApp] = useState(false);
+  const [applicantForm, setApplicantForm] = useState({
+    fullName: "",
+    phone: "+263",
+    location: "Harare",
+    experienceYears: "3",
+    skills: "Deep Cleaning, Cooking, Child Care",
+    message: "I am experienced, have verified references and a valid police clearance, and I am available immediately.",
+    hasPoliceClearance: true,
+    hasReferences: true,
+  });
+
+  const handleApplyJob = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!applyingJob) return;
+    setIsSubmittingApp(true);
+    setTimeout(() => {
+      setIsSubmittingApp(false);
+      setJobsList((prev) =>
+        prev.map((j) => (j.id === applyingJob.id ? { ...j, applicantCount: j.applicantCount + 1 } : j))
+      );
+      const appliedTitle = applyingJob.title;
+      setApplyingJob(null);
+      showToast(`✅ Application submitted for "${appliedTitle}"! The employer will review your profile.`);
+    }, 800);
+  };
+
+  const handleWhatsAppApply = (job: JobPosting) => {
+    const text = encodeURIComponent(
+      `Hello! I saw your job vacancy on VerifiedMaids Zimbabwe for "${job.title}" (${job.roleNeeded}) in ${job.suburb}, ${job.city} offering $${job.offeredSalaryUSD} USD. I would like to apply. My name is: `
+    );
+    window.open(`https://wa.me/263771234567?text=${text}`, "_blank");
+  };
 
   // Form State for Create / Edit
   const [formData, setFormData] = useState({
@@ -463,62 +502,44 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
       )}
 
       {/* Module Header Banner */}
-      <div className="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 border border-teal-800/60 rounded-3xl p-6 text-white shadow-2xl relative overflow-hidden">
+      <div className="bg-gradient-to-r from-slate-900 via-teal-950 to-slate-900 border border-teal-800/60 rounded-3xl p-6 sm:p-8 text-white shadow-2xl relative overflow-hidden mb-6">
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-1">
-            <div className="flex items-center space-x-2">
-              <span className="p-2 bg-emerald-500/20 text-emerald-400 rounded-2xl border border-emerald-500/30">
-                <Briefcase className="w-6 h-6" />
-              </span>
-              <h1 className="text-2xl font-black tracking-tight text-white">Job Vacancies & Management Hub</h1>
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-amber-400 text-slate-950 rounded-full text-xs font-black shadow-sm">
+                <Briefcase className="w-3.5 h-3.5" />
+                <span>WORKER VIEW • JOBS POSTED BY EMPLOYERS</span>
+              </div>
+              <div className="inline-flex items-center space-x-1 px-2.5 py-1 bg-teal-800/80 rounded-full text-[11px] font-semibold text-teal-200 border border-teal-700/50">
+                <ShieldCheck className="w-3.5 h-3.5 text-teal-300" />
+                <span>Verified Household Openings</span>
+              </div>
             </div>
-            <p className="text-xs text-slate-300 max-w-2xl">
-              Post household vacancies, discover verified domestic & artisan jobs across Harare, Bulawayo & Mutare, calculate statutory wage standards, and manage escrow hiring contracts.
+            <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
+              Household & Domestic Jobs in Zimbabwe
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-300">
+              For Maids, Housekeepers, Nannies, Caregivers, Cooks, Gardeners & Artisans. Browse open household positions posted by families across Harare, Bulawayo, Mutare & other cities. Apply directly or contact employers.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => setIsEmployerHiringModalOpen(true)}
-              className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center space-x-1.5 active:scale-95 border border-emerald-300/40"
-            >
-              <Sparkles className="w-4 h-4 text-emerald-950 fill-emerald-950" />
-              <span>Employer Hiring Form</span>
-            </button>
+            {onNavigateToMarketplace && (
+              <button
+                onClick={onNavigateToMarketplace}
+                className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center space-x-1.5 active:scale-95 border border-emerald-300/40"
+              >
+                <Users className="w-4 h-4 text-slate-950" />
+                <span>Looking to Hire? Browse Maids →</span>
+              </button>
+            )}
 
             <button
-              onClick={() => {
-                setEditingJob(null);
-                setFormData({
-                  title: "",
-                  roleNeeded: "Domestic worker",
-                  employerName: "",
-                  city: "Harare",
-                  suburb: "Borrowdale",
-                  offeredSalaryUSD: 240,
-                  payFrequency: "Monthly",
-                  workType: "Full-Time",
-                  helperType: "Live-In",
-                  primaryFocus: "Housekeeping",
-                  preferredAges: "25 - 45 years",
-                  numKids: 2,
-                  numAdults: 2,
-                  numBedrooms: 3,
-                  pets: "1 Dog (Friendly)",
-                  specialNeeds: "",
-                  proposedOffDays: "Alternate Weekends (Saturday afternoon to Sunday evening)",
-                  staffAccommodation: "Own en-suite bedroom with private bathroom and solar power backup",
-                  description: "",
-                  requiredSkills: "Deep Cleaning, First Aid, Laundry",
-                  urgent: false,
-                  isFeatured: false,
-                });
-                setShowCreateModal(true);
-              }}
-              className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center space-x-1.5 border border-slate-700 active:scale-95"
+              onClick={() => setIsEmployerHiringModalOpen(true)}
+              className="px-4 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs rounded-xl shadow-lg transition-all flex items-center space-x-1.5 active:scale-95"
             >
-              <Plus className="w-4 h-4 text-emerald-400" />
-              <span>Post New Vacancy</span>
+              <Sparkles className="w-4 h-4 text-slate-950 fill-slate-950" />
+              <span>Post Employer Vacancy</span>
             </button>
 
             <button
@@ -894,12 +915,23 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
                           <span>Renew 30 Days</span>
                         </button>
                       ) : (
-                        <button
-                          onClick={() => alert(`Opening escrow application process for "${job.title}"`)}
-                          className="px-3 py-1.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs rounded-xl shadow-sm transition-all"
-                        >
-                          Apply / Hire
-                        </button>
+                        <div className="flex items-center space-x-1.5">
+                          <button
+                            onClick={() => setApplyingJob(job)}
+                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center space-x-1 active:scale-95"
+                          >
+                            <Send className="w-3 h-3" />
+                            <span>Apply for Job</span>
+                          </button>
+                          <button
+                            onClick={() => handleWhatsAppApply(job)}
+                            className="px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs rounded-xl border border-teal-200 transition-all flex items-center space-x-1"
+                            title="Apply via WhatsApp"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5 text-teal-600" />
+                            <span className="hidden sm:inline">WhatsApp</span>
+                          </button>
+                        </div>
                       )}
 
                       <button
@@ -1462,6 +1494,142 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
         onClose={() => setIsEmployerHiringModalOpen(false)}
         onSubmitSuccess={handleEmployerHiringSuccess}
       />
+
+      {/* JOB APPLICATION MODAL (FOR DOMESTIC WORKERS) */}
+      {applyingJob && (
+        <div className="fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-5 border border-slate-200 relative my-8 animate-in fade-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setApplyingJob(null)}
+              className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div>
+              <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-emerald-100 text-emerald-900 rounded-full text-xs font-black uppercase mb-2">
+                <Send className="w-3.5 h-3.5" />
+                <span>Worker Job Application</span>
+              </div>
+              <h2 className="text-xl font-black text-slate-900">{applyingJob.title}</h2>
+              <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600 mt-1">
+                <span className="font-semibold text-emerald-800">{applyingJob.employerName}</span>
+                <span>•</span>
+                <span className="flex items-center space-x-1">
+                  <MapPin className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>
+                    {applyingJob.suburb}, {applyingJob.city}
+                  </span>
+                </span>
+                <span>•</span>
+                <span className="font-bold text-slate-900">${applyingJob.offeredSalaryUSD} USD/mo</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleApplyJob} className="space-y-4">
+              <div>
+                <label className="text-xs font-bold text-slate-800 block mb-1">Your Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Memory Moyo"
+                  value={applicantForm.fullName}
+                  onChange={(e) => setApplicantForm({ ...applicantForm, fullName: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-800 block mb-1">WhatsApp / Phone Number *</label>
+                  <input
+                    type="tel"
+                    required
+                    placeholder="+263 77..."
+                    value={applicantForm.phone}
+                    onChange={(e) => setApplicantForm({ ...applicantForm, phone: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-800 block mb-1">Years of Experience</label>
+                  <select
+                    value={applicantForm.experienceYears}
+                    onChange={(e) => setApplicantForm({ ...applicantForm, experienceYears: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
+                  >
+                    <option value="1">1 Year</option>
+                    <option value="2">2 Years</option>
+                    <option value="3">3-5 Years</option>
+                    <option value="6+">6+ Years</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-800 block mb-1">Your Key Skills</label>
+                <input
+                  type="text"
+                  value={applicantForm.skills}
+                  onChange={(e) => setApplicantForm({ ...applicantForm, skills: e.target.value })}
+                  placeholder="e.g. Ironing, Cooking, Child Care, Baking"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-800 block mb-1">Introduction Note for Employer</label>
+                <textarea
+                  rows={3}
+                  value={applicantForm.message}
+                  onChange={(e) => setApplicantForm({ ...applicantForm, message: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="space-y-2 bg-emerald-50/70 p-3.5 rounded-2xl border border-emerald-200/80 text-xs">
+                <label className="flex items-center space-x-2.5 cursor-pointer font-bold text-emerald-950">
+                  <input
+                    type="checkbox"
+                    checked={applicantForm.hasPoliceClearance}
+                    onChange={(e) => setApplicantForm({ ...applicantForm, hasPoliceClearance: e.target.checked })}
+                    className="rounded text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span>I have or can obtain a valid ZRP Police Clearance</span>
+                </label>
+                <label className="flex items-center space-x-2.5 cursor-pointer font-bold text-emerald-950">
+                  <input
+                    type="checkbox"
+                    checked={applicantForm.hasReferences}
+                    onChange={(e) => setApplicantForm({ ...applicantForm, hasReferences: e.target.checked })}
+                    className="rounded text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span>I have reachable contact references from previous households</span>
+                </label>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2">
+                <button
+                  type="submit"
+                  disabled={isSubmittingApp}
+                  className="w-full sm:flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
+                >
+                  <Send className="w-4 h-4" />
+                  <span>{isSubmittingApp ? "Submitting..." : "Submit Application"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleWhatsAppApply(applyingJob)}
+                  className="w-full sm:w-auto px-4 py-3 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center space-x-1.5 whitespace-nowrap"
+                >
+                  <MessageSquare className="w-4 h-4" />
+                  <span>Apply via WhatsApp</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* CONFIRM DELETE MODAL */}
       {deletingJobId && (

@@ -45,9 +45,9 @@ export interface AgencyPaymentRecord {
   agencyId: string;
   agencyName: string;
   amountUSD: number; // $50
-  paymentMethod: "EcoCash";
-  recipientName: string; // "Chenjerai"
-  recipientEcoCashNumber: string; // "+263 785 458 828"
+  paymentMethod: "EcoCash" | "Paynow Gateway" | string;
+  recipientName: string;
+  recipientEcoCashNumber: string;
   senderPhoneNumber: string;
   transactionReference: string;
   proofOfPaymentUrl: string;

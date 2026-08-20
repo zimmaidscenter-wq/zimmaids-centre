@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { usePlatform } from "../../context/PlatformContext";
 import { PAYMENT_GATEWAY_ASSETS } from "../common/PaymentBadges";
 import {
   ShieldCheck,
@@ -10,30 +11,67 @@ import {
   Copy,
   Check,
   Sparkles,
-  Upload,
-  Zap,
+  ExternalLink,
   Phone,
-  MessageCircle,
+  MessageSquare,
   FileCheck2,
-  Award
+  Award,
+  CreditCard,
+  RefreshCw,
+  AlertCircle,
+  Clock,
+  ArrowRight
 } from "lucide-react";
 
 interface PremiumAccessModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubscribeSuccess: () => void;
+  currency?: "USD" | "ZWG";
+  onActivateSuccess?: () => void;
+  onSubscribeSuccess?: () => void;
+  targetWorkerName?: string;
+  targetWorkerId?: string;
 }
 
 export const PremiumAccessModal: React.FC<PremiumAccessModalProps> = ({
   isOpen,
   onClose,
+  currency = "USD",
+  onActivateSuccess,
   onSubscribeSuccess,
+  targetWorkerName,
+  targetWorkerId,
 }) => {
-  const [copiedNumber, setCopiedNumber] = useState(false);
-  const [isUploadingProof, setIsUploadingProof] = useState(false);
-  const [proofFileName, setProofFileName] = useState<string | null>(null);
-  const [paymentSubmitted, setPaymentSubmitted] = useState(false);
-  const [isActivatingDemo, setIsActivatingDemo] = useState(false);
+  const {
+    currentUser,
+    createPaynowDeposit,
+    verifyPaynowPayment,
+    subscribeEmployer,
+    unlockMaidContact,
+    currentWallet,
+  } = usePlatform();
+
+  const [paymentPlan, setPaymentPlan] = useState<"subscription" | "single_unlock">("subscription");
+  const [paymentMethod, setPaymentMethod] = useState<"paynow_web" | "ecocash_mobile" | "onemoney_mobile">("paynow_web");
+  const [mobileNumber, setMobileNumber] = useState<string>("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Paynow Active Transaction State
+  const [paynowTx, setPaynowTx] = useState<{
+    transactionId: string;
+    paynowReference: string;
+    pollUrl: string;
+    checkoutUrl: string;
+    amount: number;
+    plan: "subscription" | "single_unlock";
+  } | null>(null);
+
+  const [isPolling, setIsPolling] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string>("");
+
+  const planAmount = paymentPlan === "subscription" ? 30 : 5;
 
   // Browser Back Button & Escape key support
   useEffect(() => {
@@ -62,38 +100,87 @@ export const PremiumAccessModal: React.FC<PremiumAccessModalProps> = ({
 
   if (!isOpen) return null;
 
-  const handleCopyNumber = () => {
-    navigator.clipboard.writeText("+263785458828");
-    setCopiedNumber(true);
-    setTimeout(() => setCopiedNumber(false), 2000);
-  };
+  const handleInitiatePaynowPayment = async () => {
+    setIsProcessing(true);
+    setErrorMsg(null);
 
-  const handleProofUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setProofFileName(file.name);
-      setIsUploadingProof(true);
-      setTimeout(() => {
-        setIsUploadingProof(false);
-      }, 1000);
+    try {
+      const amount = paymentPlan === "subscription" ? 30 : 5;
+      const serviceName =
+        paymentPlan === "subscription"
+          ? "30-Day Unlimited Employer Access"
+          : `Single Maid Unlock: ${targetWorkerName || "Domestic Worker"}`;
+
+      let methodLabel = "Paynow Gateway";
+      if (paymentMethod === "ecocash_mobile") methodLabel = "EcoCash Mobile Push";
+      if (paymentMethod === "onemoney_mobile") methodLabel = "OneMoney Mobile Push";
+
+      const res = await createPaynowDeposit(amount, methodLabel);
+
+      if (res && res.success) {
+        setPaynowTx({
+          transactionId: res.transactionId,
+          paynowReference: res.paynowReference,
+          pollUrl: res.pollUrl,
+          checkoutUrl: res.checkoutUrl,
+          amount,
+          plan: paymentPlan,
+        });
+
+        // Automatically open Paynow gateway in a new tab if web checkout selected
+        if (paymentMethod === "paynow_web" && res.checkoutUrl) {
+          try {
+            window.open(res.checkoutUrl, "_blank", "noopener,noreferrer");
+          } catch (e) {
+            console.warn("Popup blocked, user can click manual button:", e);
+          }
+        }
+      } else {
+        throw new Error("Unable to create Paynow transaction");
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to initialize Paynow payment. Please try again.");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const handleSubmitProof = () => {
-    setPaymentSubmitted(true);
-    setTimeout(() => {
-      onSubscribeSuccess();
-      onClose();
-    }, 1500);
-  };
+  const handleVerifyPayment = async () => {
+    if (!paynowTx) return;
+    setIsPolling(true);
+    setErrorMsg(null);
 
-  const handleInstantDemoActivate = () => {
-    setIsActivatingDemo(true);
-    setTimeout(() => {
-      setIsActivatingDemo(false);
-      onSubscribeSuccess();
-      onClose();
-    }, 1000);
+    try {
+      const verifyRes = await verifyPaynowPayment(paynowTx.transactionId, paynowTx.paynowReference);
+
+      if (verifyRes.verified) {
+        // Now finalize the subscription or unlock
+        if (paynowTx.plan === "subscription") {
+          await subscribeEmployer("30-Day Unlimited Access", 1);
+          setSuccessMessage("Your 30-Day Unlimited Employer Subscription is now ACTIVE! You can view and contact all domestic workers.");
+        } else if (targetWorkerId) {
+          await unlockMaidContact(targetWorkerId);
+          setSuccessMessage(`Contact details for ${targetWorkerName || "Worker"} have been unlocked!`);
+        } else {
+          setSuccessMessage(`Payment of $${paynowTx.amount} USD verified and credited to your wallet balance.`);
+        }
+
+        setPaymentSuccess(true);
+
+        if (onActivateSuccess) onActivateSuccess();
+        if (onSubscribeSuccess) onSubscribeSuccess();
+
+        setTimeout(() => {
+          onClose();
+        }, 2500);
+      } else {
+        setErrorMsg("Payment not yet confirmed by Paynow. If you completed payment, please wait a moment and click Verify again.");
+      }
+    } catch (err: any) {
+      setErrorMsg(err.message || "Verification request failed. Please check your connection.");
+    } finally {
+      setIsPolling(false);
+    }
   };
 
   return (
@@ -112,6 +199,7 @@ export const PremiumAccessModal: React.FC<PremiumAccessModalProps> = ({
             </button>
 
             <button
+              type="button"
               onClick={onClose}
               className="p-1.5 bg-emerald-950/60 hover:bg-emerald-950 text-white rounded-full transition-colors"
               title="Close (Escape)"
@@ -121,177 +209,267 @@ export const PremiumAccessModal: React.FC<PremiumAccessModalProps> = ({
           </div>
 
           <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-amber-400 text-slate-950 rounded-full text-xs font-black uppercase tracking-wider mb-2">
-            <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
-            <span>Employer Contact Protection</span>
+            <ShieldCheck className="w-3.5 h-3.5 fill-slate-950" />
+            <span>Paynow Zimbabwe Secure Checkout</span>
           </div>
-          <h3 className="text-2xl font-extrabold text-white">Premium Employer Access</h3>
+          <h3 className="text-2xl font-extrabold text-white">Unlock Candidate Contact Details</h3>
           <p className="text-xs text-emerald-200 mt-1">
-            Unlock direct phone, WhatsApp, and contact details for all verified domestic workers & artisans.
+            Official Paynow payment gateway for verified direct phone, WhatsApp, and private worker records.
           </p>
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
-          {paymentSubmitted ? (
-            <div className="text-center py-8 space-y-3">
+        <div className="p-6 space-y-5 max-h-[75vh] overflow-y-auto">
+          {paymentSuccess ? (
+            /* Success State */
+            <div className="text-center py-8 space-y-4">
               <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-lg">
                 <CheckCircle2 className="w-10 h-10" />
               </div>
-              <h4 className="text-xl font-extrabold text-slate-900">Proof Submitted & Activated!</h4>
-              <p className="text-xs text-slate-600 max-w-sm mx-auto">
-                Your payment proof has been submitted to admin. Your 30-Day Premium Employer Access is now active!
+              <h4 className="text-xl font-extrabold text-slate-900">Payment Verified Successfully!</h4>
+              <p className="text-xs text-slate-600 max-w-sm mx-auto leading-relaxed">
+                {successMessage}
               </p>
-            </div>
-          ) : (
-            <>
-              {/* Pricing Box */}
-              <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-500/80 rounded-2xl p-5 flex flex-wrap items-center justify-between gap-4">
-                <div>
-                  <div className="text-xs font-bold text-emerald-800 uppercase tracking-wider">
-                    30-Day Unlimited Access Pass
-                  </div>
-                  <div className="text-3xl font-black text-slate-900 mt-1">
-                    $30 <span className="text-sm font-bold text-slate-500">USD / 30 days</span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 mt-0.5">
-                    Valid for 30 consecutive days from activation date.
-                  </p>
-                </div>
-                <div className="bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-md flex items-center space-x-1">
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>Instant Unlocks</span>
-                </div>
-              </div>
-
-              {/* Benefits Grid */}
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                  Included Premium Employer Privileges
-                </h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center space-x-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="font-medium text-slate-800">Unlimited direct phone & WhatsApp</span>
-                  </div>
-                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center space-x-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="font-medium text-slate-800">Priority 24/7 customer support</span>
-                  </div>
-                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center space-x-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="font-medium text-slate-800">Advanced search & suburb radius</span>
-                  </div>
-                  <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center space-x-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span className="font-medium text-slate-800">Verified-Workers-Only filter</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Official Payment Instructions */}
-              <div className="bg-slate-900 text-white rounded-2xl p-4 space-y-3 border border-slate-800">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <img
-                      src={PAYMENT_GATEWAY_ASSETS.ecocash}
-                      alt="EcoCash"
-                      referrerPolicy="no-referrer"
-                      className="w-5 h-5 rounded object-cover"
-                    />
-                    <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">
-                      Official EcoCash Payment Details
-                    </span>
-                  </div>
-                  <span className="text-[10px] bg-blue-900/60 text-blue-200 border border-blue-700/50 font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-                    EcoCash USD / ZWG
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-xs bg-slate-800/80 p-3 rounded-xl border border-slate-700">
-                  <div className="flex items-center space-x-2">
-                    <img
-                      src={PAYMENT_GATEWAY_ASSETS.ecocash}
-                      alt="EcoCash"
-                      referrerPolicy="no-referrer"
-                      className="w-8 h-8 rounded-lg object-cover border border-blue-500/40 shrink-0"
-                    />
-                    <div>
-                      <span className="text-[10px] text-slate-400 uppercase block">Payment Method</span>
-                      <span className="font-bold text-white">EcoCash Mobile</span>
-                    </div>
-                  </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 uppercase block">Recipient Name</span>
-                    <span className="font-bold text-emerald-400">Chenjerai</span>
-                  </div>
-                  <div className="col-span-2 flex items-center justify-between bg-slate-950 p-2.5 rounded-lg border border-slate-700">
-                    <div>
-                      <span className="text-[10px] text-slate-400 uppercase block">EcoCash Number</span>
-                      <span className="font-mono text-base font-extrabold text-amber-300">+263 785 458 828</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleCopyNumber}
-                      className="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-md text-xs font-semibold flex items-center space-x-1 transition-colors"
-                    >
-                      {copiedNumber ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedNumber ? "Copied" : "Copy"}</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Upload Proof of Payment Section */}
-                <div className="pt-2">
-                  <label className="text-xs font-semibold text-slate-200 block mb-1.5">
-                    Upload Proof of Payment (Screenshot or EcoCash SMS):
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <label className="cursor-pointer flex-1 bg-slate-800 hover:bg-slate-700 border border-slate-600 border-dashed rounded-xl p-3 text-center transition-colors">
-                      <input
-                        type="file"
-                        accept="image/*,.pdf"
-                        onChange={handleProofUpload}
-                        className="hidden"
-                      />
-                      <div className="flex items-center justify-center space-x-2 text-xs text-slate-300">
-                        <Upload className="w-4 h-4 text-emerald-400" />
-                        <span className="font-semibold">
-                          {proofFileName ? proofFileName : "Choose file or screenshot"}
-                        </span>
-                      </div>
-                    </label>
-
-                    {proofFileName && (
-                      <button
-                        type="button"
-                        onClick={handleSubmitProof}
-                        className="px-4 py-3 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold rounded-xl text-xs shadow-lg transition-all"
-                      >
-                        Submit Proof
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Instant Simulation Action */}
-              <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div>
-                  <h5 className="text-xs font-bold text-emerald-950">Instant Employer Activation (Demo Mode)</h5>
-                  <p className="text-[11px] text-emerald-800">
-                    Activate 30-Day Premium Access instantly for testing worker contact unlocks.
-                  </p>
-                </div>
+              <div className="pt-2">
                 <button
                   type="button"
-                  onClick={handleInstantDemoActivate}
-                  disabled={isActivatingDemo}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-md transition-all flex items-center justify-center space-x-1.5 shrink-0"
+                  onClick={onClose}
+                  className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-all"
                 >
-                  <Zap className="w-4 h-4 text-amber-300 fill-amber-300" />
-                  <span>{isActivatingDemo ? "Activating..." : "Activate Premium $30 Now"}</span>
+                  Continue to Profile
                 </button>
+              </div>
+            </div>
+          ) : paynowTx ? (
+            /* Active Paynow Transaction Redirection & Verification Screen */
+            <div className="space-y-4">
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 text-amber-900 text-xs space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold uppercase tracking-wide text-amber-800 flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-amber-600 animate-spin" />
+                    <span>Paynow Transaction In Progress</span>
+                  </span>
+                  <span className="font-mono font-bold text-amber-900">${paynowTx.amount}.00 USD</span>
+                </div>
+                <div className="font-mono text-[11px] text-amber-800 bg-white/80 p-2 rounded-lg border border-amber-200/60">
+                  Ref: <span className="font-bold">{paynowTx.paynowReference}</span>
+                </div>
+                <p className="text-[11px] text-amber-800 leading-relaxed">
+                  Please complete authorization on the Paynow Zimbabwe secure page or your mobile phone. Once approved, click the button below to confirm.
+                </p>
+              </div>
+
+              {/* Redirect to Paynow Button */}
+              <a
+                href={paynowTx.checkoutUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm rounded-2xl shadow-lg transition-all flex items-center justify-center space-x-2 text-center"
+              >
+                <span>Open Paynow Payment Gateway</span>
+                <ExternalLink className="w-4 h-4" />
+              </a>
+
+              {/* Server Verification Action */}
+              <button
+                type="button"
+                onClick={handleVerifyPayment}
+                disabled={isPolling}
+                className="w-full py-3 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-600 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center space-x-2"
+              >
+                <RefreshCw className={`w-4 h-4 ${isPolling ? "animate-spin text-emerald-400" : ""}`} />
+                <span>{isPolling ? "Checking Paynow Status..." : "I Have Completed Payment — Verify Now"}</span>
+              </button>
+
+              {errorMsg && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setPaynowTx(null)}
+                className="w-full py-2 text-xs font-bold text-slate-500 hover:text-slate-800 text-center"
+              >
+                Choose a different payment option
+              </button>
+            </div>
+          ) : (
+            /* Plan Selection & Payment Form */
+            <>
+              {/* Plan Choice Tabs */}
+              <div className="space-y-2">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                  Select Access Plan
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div
+                    onClick={() => setPaymentPlan("subscription")}
+                    className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                      paymentPlan === "subscription"
+                        ? "border-emerald-600 bg-emerald-50/70 shadow-sm"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-black uppercase text-emerald-900">30-Day Unlimited Pass</span>
+                        <span className="px-2 py-0.5 bg-amber-400 text-slate-950 text-[9px] font-black rounded-full uppercase">
+                          Best Value
+                        </span>
+                      </div>
+                      <div className="text-2xl font-black text-slate-900">$30 <span className="text-xs font-normal text-slate-500">USD</span></div>
+                      <p className="text-[11px] text-slate-600 mt-1">
+                        Unlimited phone numbers, WhatsApp, and background documents for ALL workers for 30 days.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => setPaymentPlan("single_unlock")}
+                    className={`p-4 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between ${
+                      paymentPlan === "single_unlock"
+                        ? "border-emerald-600 bg-emerald-50/70 shadow-sm"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-black uppercase text-slate-900">Single Worker Unlock</span>
+                        <span className="px-2 py-0.5 bg-slate-100 text-slate-700 text-[9px] font-bold rounded-full">
+                          1 Worker
+                        </span>
+                      </div>
+                      <div className="text-2xl font-black text-slate-900">$5 <span className="text-xs font-normal text-slate-500">USD</span></div>
+                      <p className="text-[11px] text-slate-600 mt-1">
+                        Instant permanent contact details unlock for {targetWorkerName || "this selected worker"}.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Methods */}
+              <div className="space-y-2.5">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-700 block">
+                  Select Payment Gateway
+                </label>
+
+                {/* Paynow Online Gateway Card */}
+                <div
+                  onClick={() => setPaymentMethod("paynow_web")}
+                  className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between ${
+                    paymentMethod === "paynow_web"
+                      ? "border-emerald-600 bg-emerald-50/70"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <img
+                      src={PAYMENT_GATEWAY_ASSETS.paynow}
+                      alt="Paynow"
+                      referrerPolicy="no-referrer"
+                      className="w-10 h-10 rounded-xl object-contain border border-slate-200 p-1 bg-white shrink-0"
+                    />
+                    <div>
+                      <div className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                        <span>Paynow Zimbabwe (Instant Redirect)</span>
+                        <span className="px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-extrabold rounded">Instant</span>
+                      </div>
+                      <div className="text-[10px] text-slate-500">
+                        EcoCash, OneMoney, Visa, MasterCard, Zimswitch, InnBucks
+                      </div>
+                    </div>
+                  </div>
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${paymentMethod === "paynow_web" ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300"}`}>
+                    {paymentMethod === "paynow_web" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+                </div>
+
+                {/* EcoCash Mobile USSD Push */}
+                <div
+                  onClick={() => setPaymentMethod("ecocash_mobile")}
+                  className={`p-3.5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between ${
+                    paymentMethod === "ecocash_mobile"
+                      ? "border-emerald-600 bg-emerald-50/70"
+                      : "border-slate-200 bg-white hover:border-slate-300"
+                  }`}
+                >
+                  <div className="flex items-center space-x-3">
+                    <img
+                      src={PAYMENT_GATEWAY_ASSETS.ecocash}
+                      alt="EcoCash"
+                      referrerPolicy="no-referrer"
+                      className="w-10 h-10 rounded-xl object-contain border border-slate-200 p-1 bg-white shrink-0"
+                    />
+                    <div>
+                      <div className="text-xs font-bold text-slate-900">EcoCash Mobile USSD Push</div>
+                      <div className="text-[10px] text-slate-500">Receive authorization prompt directly on your mobile phone</div>
+                    </div>
+                  </div>
+                  <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${paymentMethod === "ecocash_mobile" ? "border-emerald-600 bg-emerald-600 text-white" : "border-slate-300"}`}>
+                    {paymentMethod === "ecocash_mobile" && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile Number Input for USSD Push */}
+              {(paymentMethod === "ecocash_mobile" || paymentMethod === "onemoney_mobile") && (
+                <div className="space-y-1.5 bg-slate-50 p-3.5 rounded-2xl border border-slate-200">
+                  <label className="text-xs font-bold text-slate-700 block">
+                    EcoCash / Mobile Number for PIN Prompt:
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-slate-400 shrink-0" />
+                    <input
+                      type="tel"
+                      value={mobileNumber}
+                      onChange={(e) => setMobileNumber(e.target.value)}
+                      placeholder="e.g. 0772 345 678"
+                      className="w-full bg-white border border-slate-300 focus:border-emerald-500 rounded-xl px-3 py-2 text-xs font-bold text-slate-900 outline-none"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-500">
+                    A USSD prompt will be sent to your phone to approve the payment.
+                  </p>
+                </div>
+              )}
+
+              {errorMsg && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{errorMsg}</span>
+                </div>
+              )}
+
+              {/* Paynow Redirect Submission Button */}
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={handleInitiatePaynowPayment}
+                  disabled={isProcessing}
+                  className="w-full py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-extrabold text-sm rounded-2xl shadow-xl shadow-emerald-600/30 transition-all flex items-center justify-center space-x-2 active:scale-[0.99]"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>
+                    {isProcessing
+                      ? "Initiating Paynow Gateway..."
+                      : `Redirect to Paynow to Pay $${planAmount}.00 USD`}
+                  </span>
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Security & Verification Footer */}
+              <div className="flex items-center justify-center space-x-4 text-[10px] text-slate-400 pt-1">
+                <span className="flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>256-Bit SSL Encrypted</span>
+                </span>
+                <span>•</span>
+                <span>Paynow Zimbabwe Certified Gateway</span>
               </div>
             </>
           )}

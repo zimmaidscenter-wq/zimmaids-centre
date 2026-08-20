@@ -112,7 +112,6 @@ export const AgencyDashboard: React.FC = () => {
   const [showWhatsAppImportModal, setShowWhatsAppImportModal] = useState(false);
   const [showPaymentProofModal, setShowPaymentProofModal] = useState(false);
   const [selectedWorkerDetail, setSelectedWorkerDetail] = useState<any>(null);
-  const [copiedNumber, setCopiedNumber] = useState(false);
 
   // Agency data resolution
   const agency: AgencyProfile = currentAgency || agencies[0];
@@ -182,14 +181,7 @@ export const AgencyDashboard: React.FC = () => {
     role: "Recruitment Manager" as AgencyStaffMember["role"],
   });
 
-  // Handle Copy EcoCash
-  const handleCopyEcoCash = () => {
-    navigator.clipboard.writeText("+263785458828");
-    setCopiedNumber(true);
-    setTimeout(() => setCopiedNumber(false), 2000);
-  };
-
-  // Submit EcoCash payment
+  // Submit payment record
   const handlePaymentSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     submitAgencySubscriptionPayment(agency.id, {
@@ -524,9 +516,9 @@ export const AgencyDashboard: React.FC = () => {
                 <div className="p-2 bg-amber-500/20 text-amber-400 rounded-xl w-fit mb-3 group-hover:scale-105 transition-transform">
                   <CreditCard className="w-5 h-5" />
                 </div>
-                <h4 className="font-bold text-sm text-white">EcoCash Subscription</h4>
+                <h4 className="font-bold text-sm text-white">Agency Subscription</h4>
                 <p className="text-xs text-slate-400 mt-1">
-                  Submit monthly $50 proof of payment to Chenjerai.
+                  Pay monthly $50 subscription via Paynow Gateway.
                 </p>
               </button>
             </div>
@@ -969,29 +961,29 @@ export const AgencyDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Official EcoCash Payment Details Box */}
-          <div className="bg-gradient-to-br from-blue-950 to-slate-900 border-2 border-blue-500/60 rounded-3xl p-6 shadow-md space-y-4 text-white">
+          {/* Paynow Zimbabwe Payment Details Box */}
+          <div className="bg-gradient-to-br from-emerald-950 to-slate-900 border-2 border-emerald-500/60 rounded-3xl p-6 shadow-md space-y-4 text-white">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <img
-                  src={PAYMENT_GATEWAY_ASSETS.ecocash}
-                  alt="EcoCash"
+                  src={PAYMENT_GATEWAY_ASSETS.paynow}
+                  alt="Paynow"
                   referrerPolicy="no-referrer"
-                  className="w-10 h-10 rounded-xl object-cover border border-blue-400/40 shrink-0 shadow-sm"
+                  className="w-10 h-10 rounded-xl object-contain bg-white p-1 border border-emerald-400/40 shrink-0 shadow-sm"
                 />
                 <div>
                   <h4 className="text-base font-black text-white flex items-center gap-2">
-                    Official EcoCash Payment Gateway
-                    <span className="bg-blue-500/30 text-blue-300 text-[10px] px-2 py-0.5 rounded font-bold uppercase">
-                      Active Rail
+                    Paynow Zimbabwe Payment Gateway
+                    <span className="bg-emerald-500/30 text-emerald-300 text-[10px] px-2 py-0.5 rounded font-bold uppercase">
+                      Automated Checkout
                     </span>
                   </h4>
-                  <p className="text-xs text-blue-300">
+                  <p className="text-xs text-emerald-300">
                     Direct monthly subscription settlement & automated verification
                   </p>
                 </div>
               </div>
-              <span className="text-xs bg-blue-900/80 text-blue-200 border border-blue-600/60 font-bold px-3 py-1 rounded-full">
+              <span className="text-xs bg-emerald-900/80 text-emerald-200 border border-emerald-600/60 font-bold px-3 py-1 rounded-full">
                 $50 USD / Month
               </span>
             </div>
@@ -1005,39 +997,46 @@ export const AgencyDashboard: React.FC = () => {
                   className="w-8 h-8 rounded-lg object-cover border border-blue-500/40 shrink-0"
                 />
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Payment Method</span>
-                  <span className="text-sm font-extrabold text-white">EcoCash USD / ZWG</span>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Mobile Channels</span>
+                  <span className="text-sm font-extrabold text-white">EcoCash / OneMoney</span>
                 </div>
               </div>
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">Recipient Name</span>
-                <span className="text-sm font-extrabold text-emerald-400">Chenjerai</span>
+              <div className="flex items-center space-x-2.5">
+                <img
+                  src={PAYMENT_GATEWAY_ASSETS.visaMastercard}
+                  alt="Cards"
+                  referrerPolicy="no-referrer"
+                  className="w-8 h-8 rounded-lg object-cover border border-emerald-500/40 shrink-0"
+                />
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Card Rail</span>
+                  <span className="text-sm font-extrabold text-emerald-400">Visa / Mastercard</span>
+                </div>
               </div>
-              <div>
-                <span className="text-[10px] uppercase font-bold text-slate-400 block">EcoCash Number</span>
-                <div className="flex items-center space-x-2 mt-0.5">
-                  <span className="text-sm font-black text-amber-300 font-mono">+263 785 458 828</span>
-                  <button
-                    onClick={handleCopyEcoCash}
-                    className="p-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-lg transition-colors border border-slate-700"
-                    title="Copy Number"
-                  >
-                    {copiedNumber ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                  </button>
+              <div className="flex items-center space-x-2.5">
+                <img
+                  src={PAYMENT_GATEWAY_ASSETS.innbucks}
+                  alt="InnBucks"
+                  referrerPolicy="no-referrer"
+                  className="w-8 h-8 rounded-lg object-cover border border-amber-500/40 shrink-0"
+                />
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-slate-400 block">Retail Outlets</span>
+                  <span className="text-sm font-extrabold text-amber-300">InnBucks QR</span>
                 </div>
               </div>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
-              <p className="text-xs text-blue-200/90 leading-relaxed">
-                Send <strong>$50 USD</strong> via EcoCash to <strong>Chenjerai (+263 785 458 828)</strong>, then submit your transaction reference number and proof of payment below.
+              <p className="text-xs text-emerald-200/90 leading-relaxed">
+                Pay <strong>$50 USD</strong> directly through Paynow Zimbabwe gateway for instant clearance and real-time ledger recording.
               </p>
               <button
                 onClick={() => setShowPaymentProofModal(true)}
                 className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shadow-md shrink-0 flex items-center space-x-1.5 transition-all"
               >
                 <Upload className="w-4 h-4" />
-                <span>Submit Proof of Payment</span>
+                <span>Submit Subscription Reference</span>
               </button>
             </div>
           </div>
@@ -1232,23 +1231,23 @@ export const AgencyDashboard: React.FC = () => {
               </div>
             ) : (
               <form onSubmit={handlePaymentSubmit} className="space-y-3.5">
-                <div className="bg-gradient-to-r from-blue-950 to-slate-900 border border-blue-500/50 rounded-2xl p-3.5 text-xs text-white space-y-1.5 shadow-sm">
+                <div className="bg-gradient-to-r from-emerald-950 to-slate-900 border border-emerald-500/50 rounded-2xl p-3.5 text-xs text-white space-y-1.5 shadow-sm">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-2">
                       <img
-                        src={PAYMENT_GATEWAY_ASSETS.ecocash}
-                        alt="EcoCash"
+                        src={PAYMENT_GATEWAY_ASSETS.paynow}
+                        alt="Paynow"
                         referrerPolicy="no-referrer"
-                        className="w-5 h-5 rounded object-cover"
+                        className="w-5 h-5 rounded object-contain bg-white p-0.5"
                       />
-                      <span className="font-bold text-white">Payment Method: EcoCash</span>
+                      <span className="font-bold text-white">Payment Gateway: Paynow Zimbabwe</span>
                     </div>
-                    <span className="font-extrabold text-amber-300 bg-blue-900/80 px-2 py-0.5 rounded border border-blue-700/50">
+                    <span className="font-extrabold text-amber-300 bg-emerald-900/80 px-2 py-0.5 rounded border border-emerald-700/50">
                       $50 USD / mo
                     </span>
                   </div>
-                  <div className="text-blue-200 text-[11px] pt-0.5 border-t border-slate-700">
-                    Recipient: <strong className="text-white">Chenjerai (+263 785 458 828)</strong>
+                  <div className="text-emerald-200 text-[11px] pt-0.5 border-t border-slate-700">
+                    Channel: <strong className="text-white">EcoCash, OneMoney, Visa/Mastercard & InnBucks</strong>
                   </div>
                 </div>
 

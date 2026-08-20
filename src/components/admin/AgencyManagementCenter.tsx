@@ -273,16 +273,16 @@ export const AgencyManagementCenter: React.FC = () => {
                     <div className="flex flex-wrap items-center gap-4 text-xs text-slate-600 pt-1">
                       <span className="flex items-center gap-1.5">
                         <img
-                          src={PAYMENT_GATEWAY_ASSETS.ecocash}
-                          alt="EcoCash"
+                          src={PAYMENT_GATEWAY_ASSETS.paynow}
+                          alt="Gateway"
                           referrerPolicy="no-referrer"
-                          className="w-4 h-4 rounded object-cover"
+                          className="w-4 h-4 rounded object-contain bg-white"
                         />
-                        Amount: <strong className="text-blue-900 font-black">${payment.amountUSD} USD</strong>
+                        Amount: <strong className="text-emerald-900 font-black">${payment.amountUSD} USD</strong>
                       </span>
                       <span>•</span>
                       <span>
-                        Sender Phone: <strong className="font-mono text-slate-800">{payment.senderPhoneNumber}</strong>
+                        Sender: <strong className="font-mono text-slate-800">{payment.senderPhoneNumber}</strong>
                       </span>
                       <span>•</span>
                       <span>
@@ -290,7 +290,7 @@ export const AgencyManagementCenter: React.FC = () => {
                       </span>
                       <span>•</span>
                       <span>
-                        Recipient: <strong>Chenjerai (+263 785 458 828)</strong>
+                        Gateway: <strong className="text-emerald-700">Paynow Zimbabwe</strong>
                       </span>
                     </div>
                   </div>
@@ -411,8 +411,8 @@ export const AgencyManagementCenter: React.FC = () => {
               <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
                 Primary Payment Gateway
               </span>
-              <div className="text-2xl font-black text-emerald-800 mt-1">EcoCash USD</div>
-              <span className="text-xs text-slate-500 block mt-1">Recipient: Chenjerai (+263 785 458 828)</span>
+              <div className="text-2xl font-black text-emerald-800 mt-1">Paynow Zimbabwe</div>
+              <span className="text-xs text-slate-500 block mt-1">Direct Settlement (EcoCash, Cards, InnBucks)</span>
             </div>
           </div>
         </div>

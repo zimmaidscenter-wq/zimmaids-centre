@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { PlacementFeeRecord, PremiumSubscription } from "../../types/marketplace";
 import { PAYMENT_GATEWAY_ASSETS } from "../common/PaymentBadges";
+import { usePlatform } from "../../context/PlatformContext";
 import {
   CreditCard,
   ShieldCheck,
@@ -24,7 +25,10 @@ import {
   AlertTriangle,
   RefreshCw,
   Building2,
-  Globe
+  Globe,
+  ExternalLink,
+  Zap,
+  ArrowRight
 } from "lucide-react";
 
 interface PaymentsLedgerProps {
@@ -40,14 +44,29 @@ export const PaymentsLedger: React.FC<PaymentsLedgerProps> = ({
   isPremiumEmployer = false,
   onActivatePremium,
 }) => {
+  const { createPaynowDeposit, verifyPaynowPayment, subscribeEmployer } = usePlatform();
+
   const [activeTab, setActiveTab] = useState<
     "placement-fees" | "premium-access" | "payment-instructions" | "blacklisting-policy"
   >("placement-fees");
 
-  const [copiedNumber, setCopiedNumber] = useState(false);
   const [calcSalary, setCalcSalary] = useState<number>(300);
   const [proofFile, setProofFile] = useState<string | null>(null);
   const [uploadedProofRecordId, setUploadedProofRecordId] = useState<string | null>(null);
+
+  // Paynow Gateway Checkout State for Placement Fees / Subscriptions
+  const [isProcessingPaynow, setIsProcessingPaynow] = useState(false);
+  const [paynowTx, setPaynowTx] = useState<{
+    transactionId: string;
+    paynowReference: string;
+    pollUrl: string;
+    checkoutUrl: string;
+    amount: number;
+    description: string;
+    recordId?: string;
+  } | null>(null);
+  const [isVerifyingPaynow, setIsVerifyingPaynow] = useState(false);
+  const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
 
   // Initial Sample Placement Fees
   const [feesList, setFeesList] = useState<PlacementFeeRecord[]>(
@@ -112,21 +131,58 @@ export const PaymentsLedger: React.FC<PaymentsLedgerProps> = ({
 
   const calcPlacementFeeUSD = Math.round(calcSalary * 0.3);
 
-  const handleCopyNumber = () => {
-    navigator.clipboard.writeText("+263785458828");
-    setCopiedNumber(true);
-    setTimeout(() => setCopiedNumber(false), 2000);
+  const handleInitiatePaynowForRecord = async (record: PlacementFeeRecord) => {
+    setIsProcessingPaynow(true);
+    setStatusFeedback(null);
+    try {
+      const res = await createPaynowDeposit(record.placementFeeUSD, "Paynow");
+      if (res.success) {
+        setPaynowTx({
+          transactionId: res.transactionId,
+          paynowReference: res.paynowReference,
+          pollUrl: res.pollUrl,
+          checkoutUrl: res.checkoutUrl,
+          amount: record.placementFeeUSD,
+          description: `30% Placement Fee: ${record.workerName} (${record.jobTitle})`,
+          recordId: record.id,
+        });
+      } else {
+        setStatusFeedback("Could not connect to Paynow Zimbabwe. Please try again.");
+      }
+    } catch (e) {
+      setStatusFeedback("Error initiating payment gateway.");
+    } finally {
+      setIsProcessingPaynow(false);
+    }
   };
 
-  const handleUploadProofForRecord = (recordId: string, fileName: string) => {
-    setFeesList((prev) =>
-      prev.map((rec) =>
-        rec.id === recordId
-          ? { ...rec, status: "Under Review", proofFileName: fileName }
-          : rec
-      )
-    );
-    setUploadedProofRecordId(null);
+  const handleVerifyCurrentPaynowTx = async () => {
+    if (!paynowTx) return;
+    setIsVerifyingPaynow(true);
+    setStatusFeedback(null);
+    try {
+      const res = await verifyPaynowPayment(paynowTx.transactionId, paynowTx.paynowReference);
+      if (res.verified) {
+        if (paynowTx.recordId) {
+          setFeesList((prev) =>
+            prev.map((rec) =>
+              rec.id === paynowTx.recordId ? { ...rec, status: "Paid", paymentMethod: "EcoCash" } : rec
+            )
+          );
+        }
+        setStatusFeedback(`✅ Payment verified successfully with Paynow! Status: PAID.`);
+        setTimeout(() => {
+          setPaynowTx(null);
+          setStatusFeedback(null);
+        }, 3000);
+      } else {
+        setStatusFeedback(`Status: ${res.message || "Awaiting confirmation from Paynow."}`);
+      }
+    } catch (e) {
+      setStatusFeedback("Failed to verify transaction status. Please check again in a few seconds.");
+    } finally {
+      setIsVerifyingPaynow(false);
+    }
   };
 
   return (
@@ -181,8 +237,8 @@ export const PaymentsLedger: React.FC<PaymentsLedgerProps> = ({
               : "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50"
           }`}
         >
-          <Smartphone className="w-4 h-4" />
-          <span>EcoCash Instructions</span>
+          <CreditCard className="w-4 h-4 text-emerald-400" />
+          <span>Paynow Payment Gateway</span>
         </button>
 
         <button
@@ -197,6 +253,61 @@ export const PaymentsLedger: React.FC<PaymentsLedgerProps> = ({
           <span>Blacklisting & Protection Policy</span>
         </button>
       </div>
+
+      {/* Active Paynow Transaction Modal / Overlay for PaymentsLedger */}
+      {paynowTx && (
+        <div className="bg-slate-900 border-2 border-emerald-500 rounded-3xl p-6 text-white shadow-2xl space-y-4 animate-in fade-in duration-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <span className="p-2 bg-emerald-500/20 rounded-xl">
+                <Zap className="w-5 h-5 text-emerald-400 animate-pulse" />
+              </span>
+              <div>
+                <h4 className="font-extrabold text-sm text-white">Paynow Zimbabwe Checkout Active</h4>
+                <p className="text-xs text-slate-300">{paynowTx.description}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-xl font-black text-amber-300">${paynowTx.amount}.00 USD</span>
+              <span className="block text-[10px] text-slate-400">Ref: {paynowTx.paynowReference}</span>
+            </div>
+          </div>
+
+          <div className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <a
+              href={paynowTx.checkoutUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs rounded-xl shadow-lg flex items-center justify-center space-x-2"
+            >
+              <span>Open Paynow Gateway Checkout</span>
+              <ExternalLink className="w-4 h-4" />
+            </a>
+
+            <button
+              onClick={handleVerifyCurrentPaynowTx}
+              disabled={isVerifyingPaynow}
+              className="w-full sm:w-auto px-5 py-3 bg-slate-800 hover:bg-slate-750 text-white font-bold text-xs rounded-xl border border-slate-700 flex items-center justify-center space-x-2 disabled:opacity-50"
+            >
+              <RefreshCw className={`w-4 h-4 ${isVerifyingPaynow ? "animate-spin text-emerald-400" : ""}`} />
+              <span>{isVerifyingPaynow ? "Verifying with Paynow..." : "I've Paid — Verify Payment"}</span>
+            </button>
+
+            <button
+              onClick={() => setPaynowTx(null)}
+              className="text-xs text-slate-400 hover:text-white underline px-2"
+            >
+              Close
+            </button>
+          </div>
+
+          {statusFeedback && (
+            <div className="p-3 bg-emerald-950/80 border border-emerald-600/50 rounded-xl text-xs text-emerald-200 font-semibold">
+              {statusFeedback}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tab 1: 30% Placement Fee Ledger */}
       {activeTab === "placement-fees" && (
@@ -235,22 +346,22 @@ export const PaymentsLedger: React.FC<PaymentsLedgerProps> = ({
               </div>
             </div>
 
-            {/* Official Instructions Mini Box */}
+            {/* Official Paynow Gateway Mini Box */}
             <div className="bg-slate-900 text-white border border-slate-800 rounded-2xl p-5 shadow-sm space-y-3 md:col-span-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
                   <img
-                    src={PAYMENT_GATEWAY_ASSETS.ecocash}
-                    alt="EcoCash"
+                    src={PAYMENT_GATEWAY_ASSETS.paynow}
+                    alt="Paynow"
                     referrerPolicy="no-referrer"
-                    className="w-5 h-5 rounded object-cover"
+                    className="w-6 h-6 rounded object-contain bg-white p-0.5"
                   />
-                  <h3 className="text-xs font-bold uppercase tracking-wider text-blue-400">
-                    EcoCash Placement Fee Payment Gateway
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    Paynow Zimbabwe Certified Payment Gateway
                   </h3>
                 </div>
-                <span className="text-[10px] bg-blue-900/80 text-blue-200 border border-blue-600/50 font-bold px-2 py-0.5 rounded-full">
-                  Official Channel
+                <span className="text-[10px] bg-emerald-900/80 text-emerald-200 border border-emerald-600/50 font-bold px-2 py-0.5 rounded-full">
+                  Automated Gateway
                 </span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs bg-slate-800 p-3 rounded-xl border border-slate-700">
@@ -262,21 +373,37 @@ export const PaymentsLedger: React.FC<PaymentsLedgerProps> = ({
                     className="w-7 h-7 rounded-lg object-cover border border-blue-500/40 shrink-0"
                   />
                   <div>
-                    <span className="text-[10px] text-slate-400 uppercase block">Payment Method</span>
-                    <span className="font-bold text-white">EcoCash Mobile</span>
+                    <span className="text-[10px] text-slate-400 uppercase block">Mobile Money</span>
+                    <span className="font-bold text-white">EcoCash & OneMoney</span>
                   </div>
                 </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase block">Recipient</span>
-                  <span className="font-bold text-emerald-400">Chenjerai</span>
+                <div className="flex items-center space-x-2">
+                  <img
+                    src={PAYMENT_GATEWAY_ASSETS.visaMastercard}
+                    alt="Cards"
+                    referrerPolicy="no-referrer"
+                    className="w-7 h-7 rounded-lg object-cover border border-emerald-500/40 shrink-0"
+                  />
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase block">Card Payments</span>
+                    <span className="font-bold text-white">Visa & Mastercard</span>
+                  </div>
                 </div>
-                <div>
-                  <span className="text-[10px] text-slate-400 uppercase block">EcoCash Number</span>
-                  <span className="font-mono font-bold text-amber-300 text-sm">+263 785 458 828</span>
+                <div className="flex items-center space-x-2">
+                  <img
+                    src={PAYMENT_GATEWAY_ASSETS.innbucks}
+                    alt="InnBucks"
+                    referrerPolicy="no-referrer"
+                    className="w-7 h-7 rounded-lg object-cover border border-amber-500/40 shrink-0"
+                  />
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase block">Instant Cash</span>
+                    <span className="font-bold text-amber-300">InnBucks & Zimswitch</span>
+                  </div>
                 </div>
               </div>
               <p className="text-[11px] text-slate-300 leading-relaxed">
-                After making payment via EcoCash, upload your payment receipt screenshot below. Placement fee status will update to <span className="text-emerald-400 font-bold">Under Review</span> and then <span className="text-emerald-400 font-bold">Paid</span> upon verification.
+                All placement fees and subscriptions are processed securely through the certified Paynow Zimbabwe Gateway with real-time server-side verification and instant status update.
               </p>
             </div>
           </div>
@@ -302,7 +429,7 @@ export const PaymentsLedger: React.FC<PaymentsLedgerProps> = ({
                     <th className="p-3.5">30% Placement Fee</th>
                     <th className="p-3.5">Status</th>
                     <th className="p-3.5">Due Date</th>
-                    <th className="p-3.5 text-right">Proof of Payment</th>
+                    <th className="p-3.5 text-right">Action / Gateway</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200 text-slate-800">
@@ -343,25 +470,20 @@ export const PaymentsLedger: React.FC<PaymentsLedgerProps> = ({
                       </td>
                       <td className="p-3.5 text-slate-600 font-mono text-[11px]">{rec.dueDate}</td>
                       <td className="p-3.5 text-right">
-                        {rec.proofFileName ? (
+                        {rec.status === "Paid" ? (
                           <span className="text-[11px] text-emerald-700 font-semibold flex items-center justify-end gap-1">
-                            <FileText className="w-3.5 h-3.5" />
-                            <span>{rec.proofFileName}</span>
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Settled via Paynow</span>
                           </span>
                         ) : (
-                          <label className="cursor-pointer inline-flex items-center space-x-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-lg text-[11px] font-bold transition-colors">
-                            <Upload className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Upload Proof</span>
-                            <input
-                              type="file"
-                              accept="image/*,.pdf"
-                              onChange={(e) => {
-                                const f = e.target.files?.[0];
-                                if (f) handleUploadProofForRecord(rec.id, f.name);
-                              }}
-                              className="hidden"
-                            />
-                          </label>
+                          <button
+                            onClick={() => handleInitiatePaynowForRecord(rec)}
+                            disabled={isProcessingPaynow}
+                            className="inline-flex items-center space-x-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[11px] font-bold transition-all shadow-sm active:scale-95 disabled:opacity-50"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                            <span>Pay via Paynow (${rec.placementFeeUSD})</span>
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -385,7 +507,7 @@ export const PaymentsLedger: React.FC<PaymentsLedgerProps> = ({
               Premium Employer Access ($30 USD / 30 Days)
             </h3>
             <p className="text-xs text-slate-600 leading-relaxed">
-              Employers must purchase a Premium Employer subscription to unlock direct protected candidate contact details (Phone numbers, WhatsApp, Email, Physical addresses) across Zimbabwe.
+              Employers can unlock direct protected candidate contact details (Phone numbers, WhatsApp, Email, Physical addresses) via the Paynow payment gateway.
             </p>
           </div>
 
@@ -431,80 +553,144 @@ export const PaymentsLedger: React.FC<PaymentsLedgerProps> = ({
               {onActivatePremium && !isPremiumEmployer && (
                 <button
                   onClick={onActivatePremium}
-                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2"
+                  className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2 active:scale-95"
                 >
-                  <Sparkles className="w-4 h-4 text-amber-300 fill-amber-300" />
-                  <span>Upgrade / Activate Premium Employer Access ($30)</span>
+                  <CreditCard className="w-4 h-4 text-white" />
+                  <span>Pay $30 USD via Paynow Gateway</span>
                 </button>
               )}
             </div>
 
-            {/* EcoCash Payment Box */}
-            <div className="bg-slate-900 text-white border border-slate-800 rounded-2xl p-6 space-y-4">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400">
-                Subscription Payment Instructions
-              </h4>
-              <div className="space-y-2 text-xs bg-slate-800 p-4 rounded-xl border border-slate-700">
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Payment Gateway:</span>
-                  <span className="font-bold text-white">EcoCash</span>
+            {/* Paynow Zimbabwe Gateway Box */}
+            <div className="bg-slate-900 text-white border border-slate-800 rounded-2xl p-6 space-y-4 flex flex-col justify-between">
+              <div className="space-y-3">
+                <div className="flex items-center space-x-2">
+                  <img
+                    src={PAYMENT_GATEWAY_ASSETS.paynow}
+                    alt="Paynow"
+                    referrerPolicy="no-referrer"
+                    className="w-6 h-6 rounded object-contain bg-white p-0.5"
+                  />
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-400">
+                    Direct Payment Gateway Integration
+                  </h4>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Recipient Name:</span>
-                  <span className="font-bold text-emerald-400">Chenjerai</span>
-                </div>
-                <div className="flex justify-between items-center pt-2 border-t border-slate-700">
-                  <span className="text-slate-400">EcoCash Number:</span>
-                  <span className="font-mono text-base font-extrabold text-amber-300">+263 785 458 828</span>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  All subscriptions are processed automatically via the <strong>Paynow Zimbabwe Payment Gateway</strong>. No manual receipts or delay required.
+                </p>
+
+                <div className="space-y-2 text-xs bg-slate-800 p-4 rounded-xl border border-slate-700">
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Payment Gateway:</span>
+                    <span className="font-bold text-emerald-400">Paynow Zimbabwe</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Supported Methods:</span>
+                    <span className="font-semibold text-white">EcoCash, OneMoney, Visa, MasterCard, InnBucks</span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-slate-700">
+                    <span className="text-slate-400">Processing Time:</span>
+                    <span className="font-bold text-amber-300">Instant Automated Verification</span>
+                  </div>
                 </div>
               </div>
 
-              <div className="text-[11px] text-slate-300 leading-relaxed">
-                When a subscription expires after 30 days, contact details become hidden again until renewed.
-              </div>
+              {onActivatePremium && !isPremiumEmployer && (
+                <button
+                  onClick={onActivatePremium}
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center justify-center space-x-2"
+                >
+                  <Zap className="w-4 h-4 text-amber-300" />
+                  <span>Launch Paynow Checkout ($30)</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Tab 3: Official EcoCash Instructions */}
+      {/* Tab 3: Official Paynow Gateway Overview */}
       {activeTab === "payment-instructions" && (
         <div className="bg-slate-900 text-white border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
           <div className="max-w-2xl space-y-2">
             <span className="px-3 py-1 bg-emerald-800/80 text-emerald-200 text-xs font-bold rounded-full">
-              Official Platform Recipient Details
+              Automated Online Settlement
             </span>
-            <h3 className="text-2xl font-black text-white">EcoCash Payment Gateway</h3>
+            <h3 className="text-2xl font-black text-white">Paynow Zimbabwe Payment Gateway</h3>
             <p className="text-xs text-slate-300 leading-relaxed">
-              Use these details for paying Premium Employer Subscriptions ($30 USD) or worker 30% placement fees.
+              All transactions on Zimbabwe Maids Centre — including Premium Employer subscriptions, worker wallet deposits, and 30% placement fees — are routed securely through Paynow Zimbabwe.
             </p>
           </div>
 
-          <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 max-w-lg space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase block">Payment Method</span>
-                <span className="font-bold text-white text-sm">EcoCash</span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
+              <div className="flex items-center space-x-2.5">
+                <img
+                  src={PAYMENT_GATEWAY_ASSETS.ecocash}
+                  alt="EcoCash"
+                  referrerPolicy="no-referrer"
+                  className="w-8 h-8 rounded-lg object-cover border border-blue-500/40 shrink-0"
+                />
+                <div>
+                  <h4 className="font-extrabold text-white text-xs">EcoCash Mobile</h4>
+                  <span className="text-[10px] text-blue-300">USD & ZWG Mobile Money</span>
+                </div>
               </div>
-              <div className="bg-slate-900 p-3.5 rounded-xl border border-slate-800">
-                <span className="text-[10px] text-slate-400 uppercase block">Recipient Name</span>
-                <span className="font-bold text-emerald-400 text-sm">Chenjerai</span>
-              </div>
+              <p className="text-[11px] text-slate-400">
+                Direct USSD push or Paynow web prompt. Instant verification upon entering your PIN.
+              </p>
             </div>
 
-            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex items-center justify-between">
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase block">EcoCash Recipient Number</span>
-                <span className="font-mono text-xl font-black text-amber-300">+263 785 458 828</span>
+            <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
+              <div className="flex items-center space-x-2.5">
+                <img
+                  src={PAYMENT_GATEWAY_ASSETS.visaMastercard}
+                  alt="Cards"
+                  referrerPolicy="no-referrer"
+                  className="w-8 h-8 rounded-lg object-cover border border-emerald-500/40 shrink-0"
+                />
+                <div>
+                  <h4 className="font-extrabold text-white text-xs">Visa & MasterCard</h4>
+                  <span className="text-[10px] text-emerald-300">International & Local Cards</span>
+                </div>
               </div>
-              <button
-                onClick={handleCopyNumber}
-                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-lg flex items-center space-x-1"
-              >
-                {copiedNumber ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-                <span>{copiedNumber ? "Copied!" : "Copy Number"}</span>
-              </button>
+              <p className="text-[11px] text-slate-400">
+                Secure 3D-Secure debit/credit card clearance for diaspora and domestic clients.
+              </p>
             </div>
+
+            <div className="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
+              <div className="flex items-center space-x-2.5">
+                <img
+                  src={PAYMENT_GATEWAY_ASSETS.innbucks}
+                  alt="InnBucks"
+                  referrerPolicy="no-referrer"
+                  className="w-8 h-8 rounded-lg object-cover border border-amber-500/40 shrink-0"
+                />
+                <div>
+                  <h4 className="font-extrabold text-white text-xs">InnBucks & Zimswitch</h4>
+                  <span className="text-[10px] text-amber-300">Fast Retail & Bank Clearing</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                Fast cash deposits via Simbisa outlets & Zimswitch online bank direct debits.
+              </p>
+            </div>
+          </div>
+
+          <div className="p-4 bg-emerald-950/60 border border-emerald-800/60 rounded-2xl text-xs text-emerald-200 flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+              <span>All payments are SSL encrypted and protected by Paynow Zimbabwe merchant escrow.</span>
+            </div>
+            {onActivatePremium && !isPremiumEmployer && (
+              <button
+                onClick={onActivatePremium}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shrink-0 ml-3"
+              >
+                Pay via Gateway →
+              </button>
+            )}
           </div>
         </div>
       )}

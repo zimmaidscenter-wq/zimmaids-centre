@@ -21,12 +21,14 @@ export interface GatewayInfo {
 }
 
 export const PAYMENT_GATEWAY_ASSETS = {
+  paynow: zimswitchImg,
   ecocash: ecocashImg,
   innbucks: innbucksImg,
   zimswitch: zimswitchImg,
   zipit: zimswitchImg,
   visa: visaCardImg,
   mastercard: visaCardImg,
+  visaMastercard: visaCardImg,
   mukuru: mukuruImg,
   onemoney: onemoneyImg,
 };
@@ -191,7 +193,7 @@ export const EcoCashOfficialBadge: React.FC<{
           </span>
         </div>
         <div className="text-[10px] text-blue-300 font-medium">
-          Direct Merchant Escrow (+263 785 458 828)
+          Paynow Automated Gateway Settlement
         </div>
       </div>
     </div>

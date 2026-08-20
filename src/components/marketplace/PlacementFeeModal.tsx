@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { WorkerProfile, PlacementFeeRecord } from "../../types/marketplace";
 import { PAYMENT_GATEWAY_ASSETS } from "../common/PaymentBadges";
 import { VerifiedBadge } from "../common/VerifiedBadge";
+import { usePlatform } from "../../context/PlatformContext";
 import {
   ShieldCheck,
   DollarSign,
@@ -16,7 +17,11 @@ import {
   Clock,
   Sparkles,
   Gift,
-  Tag
+  Tag,
+  CreditCard,
+  Zap,
+  ExternalLink,
+  RefreshCw
 } from "lucide-react";
 
 interface PlacementFeeModalProps {
@@ -34,13 +39,25 @@ export const PlacementFeeModal: React.FC<PlacementFeeModalProps> = ({
   onRecordPlacementSuccess,
   onOpenReferralProgram,
 }) => {
+  const { createPaynowDeposit, verifyPaynowPayment, currentUser } = usePlatform();
+
   const [agreedSalary, setAgreedSalary] = useState<number>(worker ? worker.monthlyRateUSD : 250);
-  const [copiedNumber, setCopiedNumber] = useState(false);
   const [proofFileName, setProofFileName] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [employerNameInput, setEmployerNameInput] = useState("Mr. Tafadzwa Tagwirei");
-  const [ecoCashUsedInput, setEcoCashUsedInput] = useState("+263 77 123 4567");
+  const [employerNameInput, setEmployerNameInput] = useState(currentUser ? currentUser.name : "Dr. Farai Mutasa");
+  const [paymentMode, setPaymentMode] = useState<"paynow" | "later">("paynow");
+
+  // Paynow direct flow
+  const [isProcessingPaynow, setIsProcessingPaynow] = useState(false);
+  const [paynowTx, setPaynowTx] = useState<{
+    transactionId: string;
+    paynowReference: string;
+    pollUrl: string;
+    checkoutUrl: string;
+  } | null>(null);
+  const [isVerifyingPaynow, setIsVerifyingPaynow] = useState(false);
+  const [statusFeedback, setStatusFeedback] = useState<string | null>(null);
 
   // Referral Discount State
   const [referralCodeInput, setReferralCodeInput] = useState("");
@@ -60,7 +77,6 @@ export const PlacementFeeModal: React.FC<PlacementFeeModalProps> = ({
     if (!code) return;
 
     if (code.includes("REF") || code.includes("ZMC") || code.includes("INVITE") || code.includes("VIP")) {
-      // Valid referral discount code ($20 off or custom)
       const discount = 20;
       setAppliedDiscountUSD(discount);
       setAppliedCodeLabel(code);
@@ -70,10 +86,59 @@ export const PlacementFeeModal: React.FC<PlacementFeeModalProps> = ({
     }
   };
 
-  const handleCopyNumber = () => {
-    navigator.clipboard.writeText("+263785458828");
-    setCopiedNumber(true);
-    setTimeout(() => setCopiedNumber(false), 2000);
+  const handleStartPaynow = async () => {
+    setIsProcessingPaynow(true);
+    setStatusFeedback(null);
+    try {
+      const res = await createPaynowDeposit(finalPlacementFeeUSD, "Paynow");
+      if (res.success) {
+        setPaynowTx({
+          transactionId: res.transactionId,
+          paynowReference: res.paynowReference,
+          pollUrl: res.pollUrl,
+          checkoutUrl: res.checkoutUrl,
+        });
+      } else {
+        setStatusFeedback("Could not initialize Paynow gateway. Please try again.");
+      }
+    } catch (e) {
+      setStatusFeedback("Payment gateway connection error.");
+    } finally {
+      setIsProcessingPaynow(false);
+    }
+  };
+
+  const handleVerifyPaynowTx = async () => {
+    if (!paynowTx) return;
+    setIsVerifyingPaynow(true);
+    setStatusFeedback(null);
+    try {
+      const res = await verifyPaynowPayment(paynowTx.transactionId, paynowTx.paynowReference);
+      if (res.verified) {
+        setStatusFeedback("✅ Placement fee verified & settled via Paynow!");
+        const newRecord: PlacementFeeRecord = {
+          id: `place-${Date.now()}`,
+          workerId: worker.id,
+          workerName: worker.fullName,
+          employerName: employerNameInput || "Verified Employer",
+          jobTitle: `${worker.role} Placement`,
+          agreedSalaryUSD: agreedSalary,
+          placementFeeUSD: finalPlacementFeeUSD,
+          status: "Paid",
+          placementDate: new Date().toISOString().split("T")[0],
+          dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          paymentMethod: "EcoCash",
+        };
+        onRecordPlacementSuccess(newRecord);
+        setIsSubmitted(true);
+      } else {
+        setStatusFeedback(`Status: ${res.message || "Awaiting confirmation from Paynow."}`);
+      }
+    } catch (e) {
+      setStatusFeedback("Verification pending. Please verify after completing PIN prompt.");
+    } finally {
+      setIsVerifyingPaynow(false);
+    }
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,20 +163,18 @@ export const PlacementFeeModal: React.FC<PlacementFeeModalProps> = ({
       status: proofFileName ? "Under Review" : "Pending",
       placementDate: new Date().toISOString().split("T")[0],
       dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      proofFileName: proofFileName || undefined,
       paymentMethod: "EcoCash",
-      ecoCashNumberUsed: ecoCashUsedInput,
-      notes: appliedCodeLabel ? `30% Placement Fee with Referral Discount ${appliedCodeLabel} (-$${appliedDiscountUSD} USD)` : "30% Placement Fee agreed as per platform terms.",
+      proofFileName: proofFileName || undefined,
+      notes: appliedCodeLabel
+        ? `30% Placement Fee with Referral Discount ${appliedCodeLabel} (-$${appliedDiscountUSD} USD)`
+        : "30% Placement Fee agreed as per platform terms.",
     };
 
     setTimeout(() => {
+      onRecordPlacementSuccess(newRecord);
       setIsSubmitting(false);
       setIsSubmitted(true);
-      setTimeout(() => {
-        onRecordPlacementSuccess(newRecord);
-        onClose();
-      }, 1500);
-    }, 1200);
+    }, 600);
   };
 
   return (
@@ -255,77 +318,106 @@ export const PlacementFeeModal: React.FC<PlacementFeeModalProps> = ({
                 </div>
               </div>
 
-              {/* Payment Details Card */}
+              {/* Paynow Zimbabwe Gateway Card */}
               <div className="bg-slate-900 text-white p-4 rounded-2xl border border-slate-800 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <img
-                      src={PAYMENT_GATEWAY_ASSETS.ecocash}
-                      alt="EcoCash"
+                      src={PAYMENT_GATEWAY_ASSETS.paynow}
+                      alt="Paynow"
                       referrerPolicy="no-referrer"
-                      className="w-5 h-5 rounded object-cover"
+                      className="w-5 h-5 rounded object-contain bg-white p-0.5"
                     />
-                    <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">
-                      EcoCash Payment Details
+                    <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                      Paynow Zimbabwe Payment Gateway
                     </span>
                   </div>
-                  <span className="text-[10px] bg-blue-900/60 text-blue-200 border border-blue-700/50 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-                    EcoCash USD / ZWG
+                  <span className="text-[10px] bg-emerald-900/60 text-emerald-200 border border-emerald-700/50 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                    Instant Online Checkout
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs bg-slate-800 p-3 rounded-xl border border-slate-700">
+                <div className="grid grid-cols-3 gap-2 text-xs bg-slate-800 p-3 rounded-xl border border-slate-700">
                   <div className="flex items-center space-x-2">
                     <img
                       src={PAYMENT_GATEWAY_ASSETS.ecocash}
                       alt="EcoCash"
                       referrerPolicy="no-referrer"
-                      className="w-8 h-8 rounded-lg object-cover border border-blue-500/40 shrink-0"
+                      className="w-7 h-7 rounded-lg object-cover border border-blue-500/40 shrink-0"
                     />
                     <div>
-                      <span className="text-[10px] text-slate-400 uppercase block">Gateway</span>
-                      <span className="font-bold text-white">EcoCash Mobile</span>
+                      <span className="text-[9px] text-slate-400 uppercase block">Mobile</span>
+                      <span className="font-bold text-white text-[11px]">EcoCash</span>
                     </div>
                   </div>
-                  <div>
-                    <span className="text-[10px] text-slate-400 uppercase block">Official Recipient</span>
-                    <span className="font-bold text-emerald-400">Chenjerai</span>
-                  </div>
-                  <div className="col-span-2 flex items-center justify-between bg-slate-950 p-2 rounded-lg border border-slate-700">
+                  <div className="flex items-center space-x-2">
+                    <img
+                      src={PAYMENT_GATEWAY_ASSETS.visaMastercard}
+                      alt="Card"
+                      referrerPolicy="no-referrer"
+                      className="w-7 h-7 rounded-lg object-cover border border-emerald-500/40 shrink-0"
+                    />
                     <div>
-                      <span className="text-[10px] text-slate-400 uppercase block">EcoCash Number</span>
-                      <span className="font-mono text-sm font-bold text-amber-300">+263 785 458 828</span>
+                      <span className="text-[9px] text-slate-400 uppercase block">Cards</span>
+                      <span className="font-bold text-white text-[11px]">Visa / MC</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={handleCopyNumber}
-                      className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-white rounded text-xs flex items-center space-x-1"
-                    >
-                      {copiedNumber ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                      <span>{copiedNumber ? "Copied" : "Copy"}</span>
-                    </button>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <img
+                      src={PAYMENT_GATEWAY_ASSETS.innbucks}
+                      alt="InnBucks"
+                      referrerPolicy="no-referrer"
+                      className="w-7 h-7 rounded-lg object-cover border border-amber-500/40 shrink-0"
+                    />
+                    <div>
+                      <span className="text-[9px] text-slate-400 uppercase block">Retail</span>
+                      <span className="font-bold text-amber-300 text-[11px]">InnBucks</span>
+                    </div>
                   </div>
                 </div>
 
-                {/* Upload Proof */}
-                <div>
-                  <label className="text-xs font-semibold text-slate-300 block mb-1">
-                    Upload Proof of Payment (Optional Now, can be uploaded later):
-                  </label>
-                  <label className="cursor-pointer block bg-slate-800 hover:bg-slate-700 border border-slate-600 border-dashed rounded-xl p-2.5 text-center transition-colors">
-                    <input
-                      type="file"
-                      accept="image/*,.pdf"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                    <div className="flex items-center justify-center space-x-2 text-xs text-slate-300">
-                      <Upload className="w-4 h-4 text-emerald-400" />
-                      <span className="font-medium">{proofFileName || "Choose screenshot or EcoCash SMS receipt"}</span>
+                {paynowTx ? (
+                  <div className="p-3 bg-slate-950 rounded-xl border border-emerald-600/60 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-emerald-300 font-bold">Paynow Ref: {paynowTx.paynowReference}</span>
+                      <span className="text-amber-300 font-bold">${finalPlacementFeeUSD} USD</span>
                     </div>
-                  </label>
-                </div>
+                    <div className="flex gap-2">
+                      <a
+                        href={paynowTx.checkoutUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-lg flex items-center justify-center gap-1"
+                      >
+                        <span>Open Gateway</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                      <button
+                        type="button"
+                        onClick={handleVerifyPaynowTx}
+                        disabled={isVerifyingPaynow}
+                        className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-lg border border-slate-700 flex items-center gap-1"
+                      >
+                        <RefreshCw className={`w-3.5 h-3.5 ${isVerifyingPaynow ? "animate-spin" : ""}`} />
+                        <span>Verify</span>
+                      </button>
+                    </div>
+                    {statusFeedback && (
+                      <p className="text-[10px] text-emerald-300 font-semibold">{statusFeedback}</p>
+                    )}
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleStartPaynow}
+                    disabled={isProcessingPaynow}
+                    className="w-full py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs rounded-xl shadow transition-all flex items-center justify-center space-x-1.5"
+                  >
+                    <Zap className="w-4 h-4" />
+                    <span>{isProcessingPaynow ? "Opening Gateway..." : `Pay $${finalPlacementFeeUSD} USD via Paynow Gateway`}</span>
+                  </button>
+                )}
               </div>
 
               {/* Form Actions */}
@@ -340,10 +432,10 @@ export const PlacementFeeModal: React.FC<PlacementFeeModalProps> = ({
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-1/2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow-lg shadow-emerald-600/30 transition-all flex items-center justify-center space-x-1.5"
+                  className="w-1/2 py-2.5 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl text-xs shadow transition-all flex items-center justify-center space-x-1.5"
                 >
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>{isSubmitting ? "Recording..." : "Confirm Placement"}</span>
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                  <span>{isSubmitting ? "Recording..." : "Record Placement (Later)"}</span>
                 </button>
               </div>
             </form>

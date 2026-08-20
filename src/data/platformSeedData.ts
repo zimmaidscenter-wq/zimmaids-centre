@@ -265,7 +265,7 @@ export const INITIAL_MAID_PROFILES: MaidProfileRecord[] = [
       },
     ],
     isFeatured: true,
-    unlockedByEmployerIds: ["usr-emp-01"],
+    unlockedByEmployerIds: [],
     createdAt: "2026-02-10",
     updatedAt: "2026-08-10",
   },

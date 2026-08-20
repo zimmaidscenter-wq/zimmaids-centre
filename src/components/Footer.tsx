@@ -91,10 +91,10 @@ export const Footer: React.FC<FooterProps> = ({
                 className="text-[#25D366] hover:text-white font-bold inline-flex items-center gap-1.5 text-xs"
               >
                 <MessageCircle className="w-4 h-4 fill-[#25D366] text-[#25D366]" />
-                <span>WhatsApp Support: +263 785 458 828</span>
+                <span>WhatsApp Support Desk</span>
               </a>
               <div className="text-[10px] text-slate-400">
-                EcoCash Recipient Name: <span className="text-emerald-400 font-bold">Chenjerai</span>
+                Payment Processing: <span className="text-emerald-400 font-bold">Paynow Zimbabwe Gateway</span>
               </div>
             </div>
           </div>

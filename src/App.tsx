@@ -46,6 +46,7 @@ export default function App() {
   // Premium Access & Placement States
   const [isPremiumEmployer, setIsPremiumEmployer] = useState<boolean>(false);
   const [isPremiumModalOpen, setIsPremiumModalOpen] = useState<boolean>(false);
+  const [premiumTargetWorker, setPremiumTargetWorker] = useState<WorkerProfile | null>(null);
   const [isReferralModalOpen, setIsReferralModalOpen] = useState<boolean>(false);
   const [isAgencyRegistrationModalOpen, setIsAgencyRegistrationModalOpen] = useState<boolean>(false);
   const [placementWorker, setPlacementWorker] = useState<WorkerProfile | null>(null);
@@ -114,7 +115,11 @@ export default function App() {
                   selectedCity={selectedCity}
                   currency={currency}
                   isPremiumEmployer={isPremiumEmployer}
-                  onOpenPremiumModal={() => setIsPremiumModalOpen(true)}
+                  onNavigateToJobs={() => setActiveTab("jobs")}
+                  onOpenPremiumModal={(w) => {
+                    setPremiumTargetWorker(w || null);
+                    setIsPremiumModalOpen(true);
+                  }}
                   onOpenHirePlacement={(w) => setPlacementWorker(w)}
                   onOpenChat={(w) => setChatWorker(w)}
                 />
@@ -125,7 +130,12 @@ export default function App() {
                   <AgencyDashboard />
                 </div>
               )}
-              {activeTab === "jobs" && <EmployerDashboard />}
+              {activeTab === "jobs" && (
+                <JobManagementModule
+                  currency={currency}
+                  onNavigateToMarketplace={() => setActiveTab("marketplace")}
+                />
+              )}
               {activeTab === "search" && <EnterpriseSearchEngine currency={currency} />}
               {activeTab === "whatsapp" && <WhatsAppMessagingSystem />}
               {activeTab === "whatsapp-upload" && (
@@ -139,7 +149,10 @@ export default function App() {
                   currency={currency}
                   placementList={placementRecords}
                   isPremiumEmployer={isPremiumEmployer}
-                  onActivatePremium={() => setIsPremiumModalOpen(true)}
+                  onActivatePremium={() => {
+                    setPremiumTargetWorker(null);
+                    setIsPremiumModalOpen(true);
+                  }}
                 />
               )}
               {activeTab === "reviews" && <ReviewAndTrustCenter />}
@@ -177,8 +190,13 @@ export default function App() {
 
         <PremiumAccessModal
           isOpen={isPremiumModalOpen}
-          onClose={() => setIsPremiumModalOpen(false)}
+          onClose={() => {
+            setIsPremiumModalOpen(false);
+            setPremiumTargetWorker(null);
+          }}
           currency={currency}
+          targetWorkerName={premiumTargetWorker?.fullName}
+          targetWorkerId={premiumTargetWorker?.id}
           onActivateSuccess={handleActivatePremiumSuccess}
         />
 
