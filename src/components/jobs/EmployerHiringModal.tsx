@@ -32,6 +32,7 @@ import {
 } from "../../types/marketplace";
 import { ALL_ZIMBABWE_CITIES, getSuburbsForCity } from "../../data/zimbabweLocations";
 import { formatEmployerHiringRequestToWhatsApp } from "../../utils/whatsappTemplates";
+import { usePlatform } from "../../context/PlatformContext";
 
 interface EmployerHiringModalProps {
   isOpen: boolean;
@@ -89,6 +90,7 @@ export const EmployerHiringModal: React.FC<EmployerHiringModalProps> = ({
   initialCity = "Harare",
   currency = "USD",
 }) => {
+  const { recordHiringNotification } = usePlatform();
   const [fullName, setFullName] = useState("");
   const [phoneOrWhatsApp, setPhoneOrWhatsApp] = useState("");
   const [city, setCity] = useState<CityLocation>(initialCity);
@@ -199,6 +201,7 @@ export const EmployerHiringModal: React.FC<EmployerHiringModalProps> = ({
     setTimeout(() => {
       setIsSubmitting(false);
       setIsSuccess(true);
+      recordHiringNotification(requestData.primaryFocus, `${requestData.helperType} ${requestData.primaryFocus} for ${requestData.physicalAddress.suburb}, ${requestData.physicalAddress.city}`);
       if (onSuccess) {
         onSuccess(requestData);
       }

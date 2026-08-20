@@ -216,9 +216,9 @@ export const EmployerDashboard: React.FC = () => {
       setPaynowCheckoutState(res);
       if (res.checkoutUrl) {
         try {
-          window.open(res.checkoutUrl, "_blank", "noopener,noreferrer");
+          window.location.href = res.checkoutUrl;
         } catch (e) {
-          console.warn("Popup blocked, user can click manual button:", e);
+          console.warn("Same-window redirect notice:", e);
         }
       }
     } catch (err: any) {
@@ -1814,12 +1814,11 @@ export const EmployerDashboard: React.FC = () => {
 
                 <a
                   href={paynowCheckoutState.checkoutUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  target="_self"
                   className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 text-center"
                 >
                   <ExternalLink className="w-4 h-4" />
-                  <span>Open Paynow Payment Gateway (Redirect)</span>
+                  <span>Open Paynow Payment Gateway (Same Window)</span>
                 </a>
 
                 <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs text-emerald-900 space-y-1">

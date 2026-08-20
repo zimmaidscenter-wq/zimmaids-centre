@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { AuthProvider } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { PlatformProvider } from "./context/PlatformContext";
 import { AuthModal } from "./components/auth/AuthModal";
 import { Header } from "./components/Header";
@@ -34,7 +34,8 @@ import { AccessibilitySettingsModal } from "./components/common/AccessibilitySet
 import { MarketingHubModal } from "./components/marketing/MarketingHubModal";
 import { UserRole, CityLocation, WorkerProfile, PlacementFeeRecord } from "./types/marketplace";
 
-export default function App() {
+function AppContent() {
+  const { currentUser } = useAuth();
   const [activeTab, setActiveTab] = useState<
     "landing" | "architecture" | "employer" | "maid" | "marketplace" | "worker" | "agency" | "jobs" | "search" | "whatsapp" | "whatsapp-upload" | "ai-studio" | "payments" | "admin" | "reviews" | "reports"
   >("landing");
@@ -60,6 +61,19 @@ export default function App() {
   const [isAccessibilityModalOpen, setIsAccessibilityModalOpen] = useState<boolean>(false);
   const [isMarketingHubOpen, setIsMarketingHubOpen] = useState<boolean>(false);
 
+  // Role-based view sync: When user role is Worker -> show Jobs / Maid; when Employer -> show Marketplace / Employer
+  React.useEffect(() => {
+    if (currentUser?.role === "Worker") {
+      if (activeTab === "employer") {
+        setActiveTab("jobs");
+      }
+    } else if (currentUser?.role === "Employer") {
+      if (activeTab === "maid" || activeTab === "worker") {
+        setActiveTab("marketplace");
+      }
+    }
+  }, [currentUser?.role]);
+
   const handleOpenLegal = (tab?: "privacy" | "terms" | "placement" | "guidelines" | "cookies" | "deletion") => {
     if (tab) setLegalInitialTab(tab);
     setIsLegalModalOpen(true);
@@ -77,171 +91,10 @@ export default function App() {
   };
 
   return (
-    <AuthProvider>
-      <PlatformProvider>
-        <div className="min-h-screen bg-slate-100 text-slate-900 font-sans selection:bg-emerald-500 selection:text-white flex flex-col justify-between">
-          <div>
-            {/* Navigation Bar */}
-            <Header
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              selectedRole={selectedRole}
-              setSelectedRole={setSelectedRole}
-              selectedCity={selectedCity}
-              setSelectedCity={setSelectedCity}
-              currency={currency}
-              setCurrency={setCurrency}
-              onOpenAgencyRegister={() => setIsAgencyRegistrationModalOpen(true)}
-              onOpenReferralProgram={() => setIsReferralModalOpen(true)}
-              onOpenNotifications={() => setIsNotificationCenterOpen(true)}
-              onOpenLegalCompliance={handleOpenLegal}
-              onOpenAccessibility={() => setIsAccessibilityModalOpen(true)}
-              onOpenMarketingHub={() => setIsMarketingHubOpen(true)}
-            />
-
-            {/* View Switcher */}
-            <main className="pb-16">
-              {activeTab === "landing" && (
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-                  <LandingShowcase onNavigateToTab={(tab) => setActiveTab(tab as any)} />
-                </div>
-              )}
-              {activeTab === "employer" && <EmployerDashboard />}
-              {activeTab === "maid" && <MaidDashboard />}
-              {activeTab === "architecture" && <ArchitectureView />}
-              {activeTab === "marketplace" && (
-                <WorkerDirectory
-                  selectedRole={selectedRole}
-                  selectedCity={selectedCity}
-                  currency={currency}
-                  isPremiumEmployer={isPremiumEmployer}
-                  onNavigateToJobs={() => setActiveTab("jobs")}
-                  onOpenPremiumModal={(w) => {
-                    setPremiumTargetWorker(w || null);
-                    setIsPremiumModalOpen(true);
-                  }}
-                  onOpenHirePlacement={(w) => setPlacementWorker(w)}
-                  onOpenChat={(w) => setChatWorker(w)}
-                />
-              )}
-              {activeTab === "worker" && <MaidDashboard />}
-              {activeTab === "agency" && (
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-                  <AgencyDashboard />
-                </div>
-              )}
-              {activeTab === "jobs" && (
-                <JobManagementModule
-                  currency={currency}
-                  onNavigateToMarketplace={() => setActiveTab("marketplace")}
-                />
-              )}
-              {activeTab === "search" && <EnterpriseSearchEngine currency={currency} />}
-              {activeTab === "whatsapp" && <WhatsAppMessagingSystem />}
-              {activeTab === "whatsapp-upload" && (
-                <WhatsAppIngestionPortal
-                  onNavigateToMarketplace={() => setActiveTab("marketplace")}
-                />
-              )}
-              {activeTab === "ai-studio" && <AIVettingStudio />}
-              {activeTab === "payments" && (
-                <PaymentsLedger
-                  currency={currency}
-                  placementList={placementRecords}
-                  isPremiumEmployer={isPremiumEmployer}
-                  onActivatePremium={() => {
-                    setPremiumTargetWorker(null);
-                    setIsPremiumModalOpen(true);
-                  }}
-                />
-              )}
-              {activeTab === "reviews" && <ReviewAndTrustCenter />}
-              {activeTab === "reports" && (
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-                  <PerformanceReportsModule />
-                </div>
-              )}
-              {activeTab === "admin" && <PlatformAdminDashboard />}
-            </main>
-          </div>
-
-        {/* Global Modals & Floating Tools */}
-        <AuthModal />
-
-        <AgencyRegistrationModal
-          isOpen={isAgencyRegistrationModalOpen}
-          onClose={() => setIsAgencyRegistrationModalOpen(false)}
-          onSuccess={() => setActiveTab("agency")}
-        />
-
-        <PlacementFeeModal
-          worker={placementWorker}
-          onClose={() => setPlacementWorker(null)}
-          currency={currency}
-          onRecordPlacementSuccess={handleRecordPlacementSuccess}
-          onOpenReferralProgram={() => setIsReferralModalOpen(true)}
-        />
-
-        <ReferralProgramModal
-          isOpen={isReferralModalOpen}
-          onClose={() => setIsReferralModalOpen(false)}
-          currency={currency}
-        />
-
-        <PremiumAccessModal
-          isOpen={isPremiumModalOpen}
-          onClose={() => {
-            setIsPremiumModalOpen(false);
-            setPremiumTargetWorker(null);
-          }}
-          currency={currency}
-          targetWorkerName={premiumTargetWorker?.fullName}
-          targetWorkerId={premiumTargetWorker?.id}
-          onActivateSuccess={handleActivatePremiumSuccess}
-        />
-
-        <ChatModal worker={chatWorker} onClose={() => setChatWorker(null)} />
-
-        <WhatsAppHelpWidget />
-
-        {/* Global Notifications Hub Modal */}
-        <NotificationCenterModal
-          isOpen={isNotificationCenterOpen}
-          onClose={() => setIsNotificationCenterOpen(false)}
-          onNavigateToTab={(tab) => {
-            if (tab === "jobs" || tab === "marketplace" || tab === "payments" || tab === "whatsapp" || tab === "worker" || tab === "agency") {
-              setActiveTab(tab as any);
-            }
-          }}
-        />
-
-        {/* Legal & Statutory Compliance Modal */}
-        <LegalComplianceModal
-          isOpen={isLegalModalOpen}
-          onClose={() => setIsLegalModalOpen(false)}
-          initialTab={legalInitialTab}
-        />
-
-        {/* Accessibility & Low-Data Mode Settings Modal */}
-        <AccessibilitySettingsModal
-          isOpen={isAccessibilityModalOpen}
-          onClose={() => setIsAccessibilityModalOpen(false)}
-        />
-
-        {/* Marketing Hub, Spotlight & Live Support Chat Modal */}
-        <MarketingHubModal
-          isOpen={isMarketingHubOpen}
-          onClose={() => setIsMarketingHubOpen(false)}
-          currency={currency}
-          onNavigateToTab={(tab) => {
-            if (tab === "marketplace" || tab === "jobs" || tab === "payments") {
-              setActiveTab(tab as any);
-            }
-          }}
-        />
-
-        {/* Sticky Mobile & Tablet Bottom Navigation Bar */}
-        <MobileBottomNav
+    <div className="min-h-screen bg-slate-100 text-slate-900 font-sans selection:bg-emerald-500 selection:text-white flex flex-col justify-between">
+      <div>
+        {/* Navigation Bar */}
+        <Header
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           selectedRole={selectedRole}
@@ -250,16 +103,183 @@ export default function App() {
           setSelectedCity={setSelectedCity}
           currency={currency}
           setCurrency={setCurrency}
-        />
-
-        {/* Footer */}
-        <Footer
+          onOpenAgencyRegister={() => setIsAgencyRegistrationModalOpen(true)}
+          onOpenReferralProgram={() => setIsReferralModalOpen(true)}
+          onOpenNotifications={() => setIsNotificationCenterOpen(true)}
           onOpenLegalCompliance={handleOpenLegal}
           onOpenAccessibility={() => setIsAccessibilityModalOpen(true)}
           onOpenMarketingHub={() => setIsMarketingHubOpen(true)}
         />
+
+        {/* View Switcher */}
+        <main className="pb-16">
+          {activeTab === "landing" && (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+              <LandingShowcase onNavigateToTab={(tab) => setActiveTab(tab as any)} />
+            </div>
+          )}
+          {activeTab === "employer" && <EmployerDashboard />}
+          {activeTab === "maid" && <MaidDashboard />}
+          {activeTab === "architecture" && <ArchitectureView />}
+          {activeTab === "marketplace" && (
+            <WorkerDirectory
+              selectedRole={selectedRole}
+              selectedCity={selectedCity}
+              currency={currency}
+              isPremiumEmployer={isPremiumEmployer}
+              onNavigateToJobs={() => setActiveTab("jobs")}
+              onOpenPremiumModal={(w) => {
+                setPremiumTargetWorker(w || null);
+                setIsPremiumModalOpen(true);
+              }}
+              onOpenHirePlacement={(w) => setPlacementWorker(w)}
+              onOpenChat={(w) => setChatWorker(w)}
+            />
+          )}
+          {activeTab === "worker" && <MaidDashboard />}
+          {activeTab === "agency" && (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+              <AgencyDashboard />
+            </div>
+          )}
+          {activeTab === "jobs" && (
+            <JobManagementModule
+              currency={currency}
+              onNavigateToMarketplace={() => setActiveTab("marketplace")}
+            />
+          )}
+          {activeTab === "search" && <EnterpriseSearchEngine currency={currency} />}
+          {activeTab === "whatsapp" && <WhatsAppMessagingSystem />}
+          {activeTab === "whatsapp-upload" && (
+            <WhatsAppIngestionPortal
+              onNavigateToMarketplace={() => setActiveTab("marketplace")}
+            />
+          )}
+          {activeTab === "ai-studio" && <AIVettingStudio />}
+          {activeTab === "payments" && (
+            <PaymentsLedger
+              currency={currency}
+              placementList={placementRecords}
+              isPremiumEmployer={isPremiumEmployer}
+              onActivatePremium={() => {
+                setPremiumTargetWorker(null);
+                setIsPremiumModalOpen(true);
+              }}
+            />
+          )}
+          {activeTab === "reviews" && <ReviewAndTrustCenter />}
+          {activeTab === "reports" && (
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
+              <PerformanceReportsModule />
+            </div>
+          )}
+          {activeTab === "admin" && <PlatformAdminDashboard />}
+        </main>
       </div>
-    </PlatformProvider>
+
+      {/* Global Modals & Floating Tools */}
+      <AuthModal />
+
+      <AgencyRegistrationModal
+        isOpen={isAgencyRegistrationModalOpen}
+        onClose={() => setIsAgencyRegistrationModalOpen(false)}
+        onSuccess={() => setActiveTab("agency")}
+      />
+
+      <PlacementFeeModal
+        worker={placementWorker}
+        onClose={() => setPlacementWorker(null)}
+        currency={currency}
+        onRecordPlacementSuccess={handleRecordPlacementSuccess}
+        onOpenReferralProgram={() => setIsReferralModalOpen(true)}
+      />
+
+      <ReferralProgramModal
+        isOpen={isReferralModalOpen}
+        onClose={() => setIsReferralModalOpen(false)}
+        currency={currency}
+      />
+
+      <PremiumAccessModal
+        isOpen={isPremiumModalOpen}
+        onClose={() => {
+          setIsPremiumModalOpen(false);
+          setPremiumTargetWorker(null);
+        }}
+        currency={currency}
+        targetWorkerName={premiumTargetWorker?.fullName}
+        targetWorkerId={premiumTargetWorker?.id}
+        onActivateSuccess={handleActivatePremiumSuccess}
+      />
+
+      <ChatModal worker={chatWorker} onClose={() => setChatWorker(null)} />
+
+      <WhatsAppHelpWidget />
+
+      {/* Global Notifications Hub Modal */}
+      <NotificationCenterModal
+        isOpen={isNotificationCenterOpen}
+        onClose={() => setIsNotificationCenterOpen(false)}
+        onNavigateToTab={(tab) => {
+          if (tab === "jobs" || tab === "marketplace" || tab === "payments" || tab === "whatsapp" || tab === "worker" || tab === "agency") {
+            setActiveTab(tab as any);
+          }
+        }}
+      />
+
+      {/* Legal & Statutory Compliance Modal */}
+      <LegalComplianceModal
+        isOpen={isLegalModalOpen}
+        onClose={() => setIsLegalModalOpen(false)}
+        initialTab={legalInitialTab}
+      />
+
+      {/* Accessibility & Low-Data Mode Settings Modal */}
+      <AccessibilitySettingsModal
+        isOpen={isAccessibilityModalOpen}
+        onClose={() => setIsAccessibilityModalOpen(false)}
+      />
+
+      {/* Marketing Hub, Spotlight & Live Support Chat Modal */}
+      <MarketingHubModal
+        isOpen={isMarketingHubOpen}
+        onClose={() => setIsMarketingHubOpen(false)}
+        currency={currency}
+        onNavigateToTab={(tab) => {
+          if (tab === "marketplace" || tab === "jobs" || tab === "payments") {
+            setActiveTab(tab as any);
+          }
+        }}
+      />
+
+      {/* Sticky Mobile & Tablet Bottom Navigation Bar */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        selectedRole={selectedRole}
+        setSelectedRole={setSelectedRole}
+        selectedCity={selectedCity}
+        setSelectedCity={setSelectedCity}
+        currency={currency}
+        setCurrency={setCurrency}
+      />
+
+      {/* Footer */}
+      <Footer
+        onOpenLegalCompliance={handleOpenLegal}
+        onOpenAccessibility={() => setIsAccessibilityModalOpen(true)}
+        onOpenMarketingHub={() => setIsMarketingHubOpen(true)}
+      />
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <PlatformProvider>
+        <AppContent />
+      </PlatformProvider>
     </AuthProvider>
   );
 }

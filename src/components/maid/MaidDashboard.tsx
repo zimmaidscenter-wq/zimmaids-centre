@@ -337,6 +337,13 @@ export const MaidDashboard: React.FC = () => {
           pollUrl: res.pollUrl,
           checkoutUrl: res.checkoutUrl,
         });
+        if (res.checkoutUrl) {
+          try {
+            window.location.href = res.checkoutUrl;
+          } catch (e) {
+            console.warn("Same-window redirect notice:", e);
+          }
+        }
       }
     } catch (e) {
       setIsProcessingPayment(false);
@@ -1839,12 +1846,11 @@ export const MaidDashboard: React.FC = () => {
                 <div className="space-y-2">
                   <a
                     href={paynowCheckoutState.checkoutUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    target="_self"
                     className="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-1.5"
                   >
                     <ExternalLink className="w-4 h-4" />
-                    Open Paynow Secure Gateway
+                    Open Paynow Gateway (Same Window)
                   </a>
 
                   <button

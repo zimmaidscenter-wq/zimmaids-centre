@@ -232,10 +232,34 @@ const INITIAL_JOB_POSTINGS = [
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // New visitors land as unauthenticated guests so they can register or sign in
-  const [currentUser, setCurrentUser] = useState<UserSession | null>(null);
+  // Retrieve saved session from localStorage so payment/page reloads never log the user out
+  const [currentUser, setCurrentUser] = useState<UserSession | null>(() => {
+    try {
+      const saved = localStorage.getItem("zmc_auth_session");
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn("Could not load persisted user session:", e);
+    }
+    return null;
+  });
+
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<"signin" | "signup" | "demo" | "agency-signup">("signup");
+
+  // Keep session synced to localStorage
+  useEffect(() => {
+    try {
+      if (currentUser) {
+        localStorage.setItem("zmc_auth_session", JSON.stringify(currentUser));
+      } else {
+        localStorage.removeItem("zmc_auth_session");
+      }
+    } catch (e) {
+      console.warn("Could not persist user session:", e);
+    }
+  }, [currentUser]);
 
   // Agencies Database
   const [agencies, setAgencies] = useState<AgencyProfile[]>(INITIAL_AGENCIES);

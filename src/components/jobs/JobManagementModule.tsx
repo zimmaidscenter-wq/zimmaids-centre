@@ -44,6 +44,8 @@ import { JobPosting, UserRole, CityLocation, HelperType, PrimaryFocusRole, Emplo
 import { SAMPLE_JOBS } from "../../data/mockData";
 import { ALL_ZIMBABWE_CITIES, getSuburbsForCity } from "../../data/zimbabweLocations";
 import { EmployerHiringModal } from "./EmployerHiringModal";
+import { usePlatform } from "../../context/PlatformContext";
+import { useAuth } from "../../context/AuthContext";
 
 interface JobManagementModuleProps {
   currency?: "USD" | "ZWG";
@@ -171,6 +173,8 @@ const JOB_TEMPLATES = [
 ];
 
 export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ currency = "USD", onNavigateToMarketplace }) => {
+  const { recordHiringNotification } = usePlatform();
+  const { currentUser } = useAuth();
   const [jobsList, setJobsList] = useState<JobPosting[]>(INITIAL_JOBS);
   const [activeTab, setActiveTab] = useState<
     "all" | "featured" | "recommended" | "nearby" | "expired" | "drafts" | "calculator" | "templates"
@@ -214,6 +218,8 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
         prev.map((j) => (j.id === applyingJob.id ? { ...j, applicantCount: j.applicantCount + 1 } : j))
       );
       const appliedTitle = applyingJob.title;
+      const workerName = applicantForm.fullName || currentUser?.fullName || "Domestic Worker";
+      recordHiringNotification(workerName, appliedTitle);
       setApplyingJob(null);
       showToast(`✅ Application submitted for "${appliedTitle}"! The employer will review your profile.`);
     }, 800);

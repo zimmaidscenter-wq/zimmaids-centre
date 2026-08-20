@@ -146,6 +146,13 @@ export const PaymentsLedger: React.FC<PaymentsLedgerProps> = ({
           description: `30% Placement Fee: ${record.workerName} (${record.jobTitle})`,
           recordId: record.id,
         });
+        if (res.checkoutUrl) {
+          try {
+            window.location.href = res.checkoutUrl;
+          } catch (e) {
+            console.warn("Same window redirect notice:", e);
+          }
+        }
       } else {
         setStatusFeedback("Could not connect to Paynow Zimbabwe. Please try again.");
       }
@@ -276,11 +283,10 @@ export const PaymentsLedger: React.FC<PaymentsLedgerProps> = ({
           <div className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
             <a
               href={paynowTx.checkoutUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+              target="_self"
               className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black text-xs rounded-xl shadow-lg flex items-center justify-center space-x-2"
             >
-              <span>Open Paynow Gateway Checkout</span>
+              <span>Open Paynow Gateway (Same Window)</span>
               <ExternalLink className="w-4 h-4" />
             </a>
 

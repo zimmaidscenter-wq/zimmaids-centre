@@ -109,24 +109,78 @@ interface PlatformContextType {
   unreadNotificationCount: number;
   markNotificationRead: (notifId: string) => void;
   markAllNotificationsRead: () => void;
+  recordHiringNotification: (workerName: string, roleTitle?: string) => void;
 }
 
 const PlatformContext = createContext<PlatformContextType | undefined>(undefined);
 
 export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Default to Master Admin for rich overview, or switch effortlessly between Maid / Employer / Admin
-  const [currentUser, setCurrentUser] = useState<PlatformUser>(INITIAL_PLATFORM_USERS[1]); // Default to Employer Mrs. Chigumba for direct testing
+  // Load persisted state if available
+  const [currentUser, setCurrentUser] = useState<PlatformUser>(() => {
+    try {
+      const saved = localStorage.getItem("zmc_platform_user");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn("Could not load saved platform user:", e);
+    }
+    return INITIAL_PLATFORM_USERS[1];
+  });
   const [allUsers, setAllUsers] = useState<PlatformUser[]>(INITIAL_PLATFORM_USERS);
 
-  const [allMaidProfiles, setAllMaidProfiles] = useState<MaidProfileRecord[]>(INITIAL_MAID_PROFILES);
+  const [allMaidProfiles, setAllMaidProfiles] = useState<MaidProfileRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem("zmc_maid_profiles");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn("Could not load saved maid profiles:", e);
+    }
+    return INITIAL_MAID_PROFILES;
+  });
   const [allEmployerProfiles, setAllEmployerProfiles] = useState<EmployerProfileRecord[]>(INITIAL_EMPLOYER_PROFILES);
   const [allJobs, setAllJobs] = useState<JobRecord[]>(INITIAL_JOBS);
   const [allApplications, setAllApplications] = useState<JobApplicationRecord[]>(INITIAL_JOB_APPLICATIONS);
-  const [wallets, setWallets] = useState<Record<string, EmployerWalletRecord>>(INITIAL_WALLETS);
-  const [transactions, setTransactions] = useState<PaymentTransactionRecord[]>(INITIAL_TRANSACTIONS);
+  const [wallets, setWallets] = useState<Record<string, EmployerWalletRecord>>(() => {
+    try {
+      const saved = localStorage.getItem("zmc_wallets");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn("Could not load saved wallets:", e);
+    }
+    return INITIAL_WALLETS;
+  });
+  const [transactions, setTransactions] = useState<PaymentTransactionRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem("zmc_transactions");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn("Could not load saved transactions:", e);
+    }
+    return INITIAL_TRANSACTIONS;
+  });
   const [pricingSettings, setPricingSettings] = useState<PlatformPricingSettings>(INITIAL_PLATFORM_PRICING);
-  const [notifications, setNotifications] = useState<PlatformNotificationItem[]>(INITIAL_NOTIFICATIONS);
+  const [notifications, setNotifications] = useState<PlatformNotificationItem[]>(() => {
+    try {
+      const saved = localStorage.getItem("zmc_notifications");
+      if (saved) return JSON.parse(saved);
+    } catch (e) {
+      console.warn("Could not load saved notifications:", e);
+    }
+    return INITIAL_NOTIFICATIONS;
+  });
   const [mediaAuditLogs, setMediaAuditLogs] = useState<MediaAuditLog[]>(INITIAL_MEDIA_AUDIT_LOGS);
+
+  // Sync to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem("zmc_platform_user", JSON.stringify(currentUser));
+      localStorage.setItem("zmc_wallets", JSON.stringify(wallets));
+      localStorage.setItem("zmc_transactions", JSON.stringify(transactions));
+      localStorage.setItem("zmc_notifications", JSON.stringify(notifications));
+      localStorage.setItem("zmc_maid_profiles", JSON.stringify(allMaidProfiles));
+    } catch (e) {
+      console.warn("Error saving platform state to localStorage:", e);
+    }
+  }, [currentUser, wallets, transactions, notifications, allMaidProfiles]);
 
   // Sync wallet for current user
   const currentWallet: EmployerWalletRecord = wallets[currentUser.id] || {
@@ -1535,6 +1589,21 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return { success: true };
   };
 
+  // Hiring notification handler
+  const recordHiringNotification = (workerName: string, roleTitle: string = "Domestic Worker") => {
+    const notif: PlatformNotificationItem = {
+      id: `notif-hire-${Date.now()}`,
+      userId: currentUser.id,
+      role: currentUser.role,
+      title: `🎉 Worker Hired: ${workerName}`,
+      message: `You have successfully hired ${workerName} as your ${roleTitle}. The statutory hiring agreement and direct contact records are now active in your employer dashboard.`,
+      type: "application",
+      isRead: false,
+      createdAt: new Date().toISOString().replace("T", " ").substring(0, 16),
+    };
+    setNotifications((prev) => [notif, ...prev]);
+  };
+
   // Notifications helpers
   const markNotificationRead = (notifId: string) => {
     setNotifications((prev) => prev.map((n) => (n.id === notifId ? { ...n, isRead: true } : n)));
@@ -1605,6 +1674,7 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         unreadNotificationCount,
         markNotificationRead,
         markAllNotificationsRead,
+        recordHiringNotification,
       }}
     >
       {children}

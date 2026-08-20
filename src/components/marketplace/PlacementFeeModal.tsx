@@ -39,7 +39,7 @@ export const PlacementFeeModal: React.FC<PlacementFeeModalProps> = ({
   onRecordPlacementSuccess,
   onOpenReferralProgram,
 }) => {
-  const { createPaynowDeposit, verifyPaynowPayment, currentUser } = usePlatform();
+  const { createPaynowDeposit, verifyPaynowPayment, currentUser, recordHiringNotification } = usePlatform();
 
   const [agreedSalary, setAgreedSalary] = useState<number>(worker ? worker.monthlyRateUSD : 250);
   const [proofFileName, setProofFileName] = useState<string | null>(null);
@@ -98,6 +98,13 @@ export const PlacementFeeModal: React.FC<PlacementFeeModalProps> = ({
           pollUrl: res.pollUrl,
           checkoutUrl: res.checkoutUrl,
         });
+        if (res.checkoutUrl) {
+          try {
+            window.location.href = res.checkoutUrl;
+          } catch (e) {
+            console.warn("Same-window redirect notice:", e);
+          }
+        }
       } else {
         setStatusFeedback("Could not initialize Paynow gateway. Please try again.");
       }
@@ -130,6 +137,7 @@ export const PlacementFeeModal: React.FC<PlacementFeeModalProps> = ({
           paymentMethod: "EcoCash",
         };
         onRecordPlacementSuccess(newRecord);
+        recordHiringNotification(worker.fullName, worker.role);
         setIsSubmitted(true);
       } else {
         setStatusFeedback(`Status: ${res.message || "Awaiting confirmation from Paynow."}`);
@@ -172,6 +180,7 @@ export const PlacementFeeModal: React.FC<PlacementFeeModalProps> = ({
 
     setTimeout(() => {
       onRecordPlacementSuccess(newRecord);
+      recordHiringNotification(worker.fullName, worker.role);
       setIsSubmitting(false);
       setIsSubmitted(true);
     }, 600);
@@ -386,11 +395,10 @@ export const PlacementFeeModal: React.FC<PlacementFeeModalProps> = ({
                     <div className="flex gap-2">
                       <a
                         href={paynowTx.checkoutUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        target="_self"
                         className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-lg flex items-center justify-center gap-1"
                       >
-                        <span>Open Gateway</span>
+                        <span>Open Gateway (Same Window)</span>
                         <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                       <button

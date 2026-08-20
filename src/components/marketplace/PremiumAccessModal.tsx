@@ -127,12 +127,12 @@ export const PremiumAccessModal: React.FC<PremiumAccessModalProps> = ({
           plan: paymentPlan,
         });
 
-        // Automatically open Paynow gateway in a new tab if web checkout selected
+        // Automatically open Paynow gateway in the same window if web checkout selected
         if (paymentMethod === "paynow_web" && res.checkoutUrl) {
           try {
-            window.open(res.checkoutUrl, "_blank", "noopener,noreferrer");
+            window.location.href = res.checkoutUrl;
           } catch (e) {
-            console.warn("Popup blocked, user can click manual button:", e);
+            console.warn("Same-window redirect notice:", e);
           }
         }
       } else {
@@ -259,14 +259,13 @@ export const PremiumAccessModal: React.FC<PremiumAccessModalProps> = ({
                 </p>
               </div>
 
-              {/* Redirect to Paynow Button */}
+              {/* Redirect to Paynow Button on Same Window */}
               <a
                 href={paynowTx.checkoutUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+                target="_self"
                 className="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm rounded-2xl shadow-lg transition-all flex items-center justify-center space-x-2 text-center"
               >
-                <span>Open Paynow Payment Gateway</span>
+                <span>Open Paynow Gateway (Same Window)</span>
                 <ExternalLink className="w-4 h-4" />
               </a>
 
