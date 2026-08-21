@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { usePlatform } from "../../context/PlatformContext";
+import { useCategories } from "../../context/CategoryContext";
 import { ALL_ZIMBABWE_CITIES, getSuburbsForCity } from "../../data/zimbabweLocations";
 import { CityLocation, UserRole } from "../../types/marketplace";
 import {
@@ -54,6 +55,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 }) => {
   const { currentUser, updateUserProfile } = useAuth();
   const { currentMaidProfile, updateMaidProfile } = usePlatform();
+  const { categories, publicCategories } = useCategories();
 
   // Form State
   const [firstName, setFirstName] = useState("");
@@ -539,8 +541,28 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               <div className="space-y-3 bg-slate-50 border border-slate-200 rounded-2xl p-4">
                 <h4 className="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
                   <Briefcase className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Experience, Rates & About Me</span>
+                  <span>Category, Experience, Rates & About Me</span>
                 </h4>
+
+                {/* Primary Category Selector */}
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">
+                    Primary Worker Category / Role <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={profession}
+                    onChange={(e) => setProfession(e.target.value as UserRole)}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                  >
+                    {categories
+                      .filter((c) => c.status === "Active")
+                      .map((cat) => (
+                        <option key={cat.id} value={cat.name}>
+                          {cat.name} ({cat.type})
+                        </option>
+                      ))}
+                  </select>
+                </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>

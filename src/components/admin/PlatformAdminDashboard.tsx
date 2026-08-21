@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { usePlatform } from "../../context/PlatformContext";
 import { MaidProfileRecord, JobRecord, PortfolioItem, calculateAge } from "../../types/platform";
+import { CategoryManagementCenter } from "./CategoryManagementCenter";
 import {
   ShieldAlert,
   Users,
@@ -32,7 +33,8 @@ import {
   History,
   AlertTriangle,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Layers
 } from "lucide-react";
 
 export const PlatformAdminDashboard: React.FC = () => {
@@ -58,7 +60,7 @@ export const PlatformAdminDashboard: React.FC = () => {
     adminToggleUserMediaSuspension,
   } = usePlatform();
 
-  const [activeTab, setActiveTab] = useState<"overview" | "maids" | "employers" | "jobs" | "transactions" | "pricing" | "media-moderation">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "categories" | "maids" | "employers" | "jobs" | "transactions" | "pricing" | "media-moderation">("categories");
 
   // Selected Maid for Document Inspection
   const [inspectingMaid, setInspectingMaid] = useState<MaidProfileRecord | null>(null);
@@ -140,6 +142,18 @@ export const PlatformAdminDashboard: React.FC = () => {
 
       {/* Navigation Tabs */}
       <div className="flex items-center gap-2 border-b border-slate-200 overflow-x-auto pb-2 scrollbar-none">
+        <button
+          onClick={() => setActiveTab("categories")}
+          className={`px-4 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 whitespace-nowrap ${
+            activeTab === "categories"
+              ? "bg-slate-900 text-white shadow-md shadow-slate-900/10"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+          }`}
+        >
+          <Layers className="w-4 h-4 text-emerald-400" />
+          Categories & $3 Featured System
+        </button>
+
         <button
           onClick={() => setActiveTab("overview")}
           className={`px-4 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 whitespace-nowrap ${
@@ -229,6 +243,9 @@ export const PlatformAdminDashboard: React.FC = () => {
           )}
         </button>
       </div>
+
+      {/* TAB 0: CATEGORIES & $3 FEATURED WORKERS */}
+      {activeTab === "categories" && <CategoryManagementCenter />}
 
       {/* TAB 1: OVERVIEW METRICS */}
       {activeTab === "overview" && (

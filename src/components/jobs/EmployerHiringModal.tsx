@@ -33,6 +33,7 @@ import {
 import { ALL_ZIMBABWE_CITIES, getSuburbsForCity } from "../../data/zimbabweLocations";
 import { formatEmployerHiringRequestToWhatsApp } from "../../utils/whatsappTemplates";
 import { usePlatform } from "../../context/PlatformContext";
+import { useCategories } from "../../context/CategoryContext";
 
 interface EmployerHiringModalProps {
   isOpen: boolean;
@@ -91,6 +92,7 @@ export const EmployerHiringModal: React.FC<EmployerHiringModalProps> = ({
   currency = "USD",
 }) => {
   const { recordHiringNotification } = usePlatform();
+  const { publicCategories, categories } = useCategories();
   const [fullName, setFullName] = useState("");
   const [phoneOrWhatsApp, setPhoneOrWhatsApp] = useState("");
   const [city, setCity] = useState<CityLocation>(initialCity);
@@ -98,7 +100,7 @@ export const EmployerHiringModal: React.FC<EmployerHiringModalProps> = ({
   const [streetAddress, setStreetAddress] = useState("");
 
   const [helperType, setHelperType] = useState<HelperType>("Live-In");
-  const [primaryFocus, setPrimaryFocus] = useState<PrimaryFocusRole>("Housekeeping");
+  const [primaryFocus, setPrimaryFocus] = useState<string>("Maids");
 
   const [preferredAges, setPreferredAges] = useState<string>("30 - 39 Years");
   const [customAgeRange, setCustomAgeRange] = useState<string>("");
@@ -497,32 +499,34 @@ export const EmployerHiringModal: React.FC<EmployerHiringModalProps> = ({
                   </div>
                 </div>
 
-                {/* Primary Focus: Housekeeping / Nanny / Elderly Care / Chef / Gardener / Maid */}
+                {/* Primary Focus: Dynamically loaded from Active Categories */}
                 <div>
                   <label className="text-xs font-bold text-slate-700 block mb-2">
-                    Primary Focus <span className="text-rose-500">*</span>
+                    Primary Worker Role / Category <span className="text-rose-500">*</span>
                   </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                    {PRIMARY_FOCUS_OPTIONS.map((item) => (
-                      <button
-                        key={item.role}
-                        type="button"
-                        onClick={() => setPrimaryFocus(item.role)}
-                        className={`p-3 rounded-2xl border text-left transition-all ${
-                          primaryFocus === item.role
-                            ? "bg-emerald-800 text-white border-emerald-800 shadow-md ring-2 ring-emerald-400"
-                            : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
-                        }`}
-                      >
-                        <div className="flex items-center space-x-2">
-                          <span className="text-lg">{item.icon}</span>
-                          <span className="font-bold text-xs">{item.label}</span>
-                        </div>
-                        <p className={`text-[10px] mt-1 line-clamp-2 leading-tight ${primaryFocus === item.role ? "text-emerald-100" : "text-slate-500"}`}>
-                          {item.desc}
-                        </p>
-                      </button>
-                    ))}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {categories
+                      .filter((c) => c.status === "Active")
+                      .map((cat) => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => setPrimaryFocus(cat.name)}
+                          className={`p-3 rounded-2xl border text-left transition-all ${
+                            primaryFocus.toLowerCase() === cat.name.toLowerCase()
+                              ? "bg-emerald-800 text-white border-emerald-800 shadow-md ring-2 ring-emerald-400"
+                              : "bg-white text-slate-700 border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          <div className="flex items-center space-x-2">
+                            <span className="text-lg">{cat.icon}</span>
+                            <span className="font-bold text-xs">{cat.name}</span>
+                          </div>
+                          <p className={`text-[10px] mt-1 line-clamp-2 leading-tight ${primaryFocus.toLowerCase() === cat.name.toLowerCase() ? "text-emerald-100" : "text-slate-500"}`}>
+                            {cat.description}
+                          </p>
+                        </button>
+                      ))}
                   </div>
                 </div>
               </div>

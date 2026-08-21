@@ -28,6 +28,7 @@ import {
 import { UserRole, CityLocation } from "../types/marketplace";
 import { ALL_ZIMBABWE_CITIES } from "../data/zimbabweLocations";
 import { useAuth } from "../context/AuthContext";
+import { useCategories } from "../context/CategoryContext";
 import { ZMC_OFFICIAL_LOGO } from "./common/BrandLogo";
 
 interface HeaderProps {
@@ -107,7 +108,15 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenMarketingHub,
 }) => {
   const { currentUser, setIsAuthModalOpen, setIsEditProfileModalOpen, setAuthModalTab, logout, switchDemoUser } = useAuth();
+  const { publicCategories } = useCategories();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+
+  const dynamicRoleOptions = [
+    ...publicCategories.map((c) => c.name),
+    "Employer",
+    "Agency",
+    "Admin",
+  ];
 
   return (
     <header className="sticky top-0 z-50 bg-emerald-950/95 backdrop-blur-md border-b border-emerald-800/40 text-white shadow-xl">
@@ -164,7 +173,7 @@ export const Header: React.FC<HeaderProps> = ({
               onChange={(e) => setSelectedRole(e.target.value as UserRole)}
               className="bg-transparent text-teal-100 font-medium text-[11px] focus:outline-none cursor-pointer max-w-[130px] truncate"
             >
-              {ALL_ROLES.map((role) => (
+              {dynamicRoleOptions.map((role) => (
                 <option key={role} value={role} className="bg-slate-900 text-white">
                   {role}
                 </option>

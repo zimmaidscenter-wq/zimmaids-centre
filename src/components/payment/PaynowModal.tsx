@@ -22,6 +22,7 @@ export interface PaynowPaymentDetails {
   serviceType: "featured_maid" | "agency_subscription" | "contact_unlock" | "placement_escrow" | "wallet_deposit" | "urgent_fee" | "other";
   targetId?: string;
   targetName?: string;
+  customReference?: string;
   metadata?: Record<string, any>;
 }
 

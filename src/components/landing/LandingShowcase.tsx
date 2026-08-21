@@ -32,12 +32,14 @@ import verificationBadgeImage from "../../assets/images/verification_badge_17866
 import caregiverNannyImage from "../../assets/images/caregiver_nanny_1786612224041.jpg";
 import skilledArtisanImage from "../../assets/images/skilled_artisan_1786612235127.jpg";
 import { ZMC_OFFICIAL_LOGO } from "../common/BrandLogo";
+import { useCategories } from "../../context/CategoryContext";
 
 interface LandingShowcaseProps {
   onNavigateToTab?: (tab: string) => void;
 }
 
 export const LandingShowcase: React.FC<LandingShowcaseProps> = ({ onNavigateToTab }) => {
+  const { publicCategories } = useCategories();
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("All");
 
   const SERVICE_CATEGORIES = [
@@ -347,46 +349,73 @@ export const LandingShowcase: React.FC<LandingShowcaseProps> = ({ onNavigateToTa
           </button>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {SERVICE_CATEGORIES.map((cat, idx) => (
-            <div
-              key={idx}
-              className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:border-emerald-400 transition-all group flex flex-col justify-between"
-            >
-              <div className="relative h-44 overflow-hidden">
-                <img
-                  src={cat.image}
-                  alt={cat.title}
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover group-hover:scale-110 transition-all duration-500"
-                />
-                <span className="absolute top-3 left-3 px-2.5 py-1 bg-slate-950/80 backdrop-blur-sm text-amber-300 text-[10px] font-bold rounded-xl border border-amber-400/40">
-                  {cat.badge}
-                </span>
-              </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {publicCategories.map((cat) => {
+            const catImage =
+              cat.coverImageUrl ||
+              (cat.name.toLowerCase().includes("maid")
+                ? "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=500"
+                : cat.name.toLowerCase().includes("gardener")
+                ? "https://images.unsplash.com/photo-1599685315640-9ceab2f58944?auto=format&fit=crop&q=80&w=500"
+                : cat.name.toLowerCase().includes("nurse")
+                ? "https://images.unsplash.com/photo-1576765608535-5f04d1e3f289?auto=format&fit=crop&q=80&w=500"
+                : "https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&q=80&w=500");
 
-              <div className="p-5 space-y-2 flex-grow flex flex-col justify-between">
-                <div>
-                  <h3 className="font-extrabold text-slate-900 text-base group-hover:text-emerald-700 transition-colors">
-                    {cat.title}
-                  </h3>
-                  <p className="text-xs text-slate-600 line-clamp-2 mt-1">
-                    {cat.description}
-                  </p>
+            return (
+              <div
+                key={cat.id}
+                className="bg-white border border-slate-200 rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:border-emerald-400 transition-all group flex flex-col justify-between"
+              >
+                <div className="relative h-48 overflow-hidden">
+                  <img
+                    src={catImage}
+                    alt={cat.name}
+                    referrerPolicy="no-referrer"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-all duration-500"
+                  />
+                  <span className="absolute top-3 left-3 px-2.5 py-1 bg-slate-950/80 backdrop-blur-sm text-amber-300 text-[10px] font-black rounded-xl border border-amber-400/40">
+                    {cat.type} • {cat.activeWorkerCount} Available
+                  </span>
+                  <span className="absolute top-3 right-3 px-2.5 py-1 bg-emerald-900/90 backdrop-blur-sm text-emerald-300 text-[10px] font-bold rounded-xl border border-emerald-500/40">
+                    ZRP Verified
+                  </span>
                 </div>
 
-                <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
-                  <span className="font-mono font-bold text-emerald-700">{cat.count}</span>
-                  <button
-                    onClick={() => onNavigateToTab?.("marketplace")}
-                    className="p-1.5 bg-slate-100 hover:bg-emerald-600 hover:text-white text-slate-700 rounded-xl transition-all"
-                  >
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                <div className="p-5 space-y-3 flex-grow flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xl">{cat.icon}</span>
+                      <h3 className="font-extrabold text-slate-900 text-lg group-hover:text-emerald-700 transition-colors">
+                        {cat.name}
+                      </h3>
+                    </div>
+                    <p className="text-xs text-slate-600 line-clamp-2 mt-2 leading-relaxed">
+                      {cat.description}
+                    </p>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
+                    <div className="flex items-center space-x-3 text-slate-600">
+                      <span className="font-mono font-bold text-emerald-700 text-xs">
+                        {cat.activeWorkerCount} Staff
+                      </span>
+                      <span>•</span>
+                      <span className="font-mono font-medium text-slate-500 text-xs">
+                        {cat.activeJobCount} Active Jobs
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => onNavigateToTab?.("marketplace")}
+                      className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-800 font-bold text-xs rounded-xl transition-all flex items-center space-x-1"
+                    >
+                      <span>Explore</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
 

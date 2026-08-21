@@ -1,11 +1,11 @@
 import React, { useState } from "react";
-import { SAMPLE_WORKERS, SAMPLE_JOBS } from "../../data/mockData";
 import { WorkerProfile, JobPosting, UserRole, CityLocation, EmployerHiringRequest } from "../../types/marketplace";
 import { WorkerProfileModal } from "./WorkerProfileModal";
 import { EmployerHiringModal } from "../jobs/EmployerHiringModal";
 import { ALL_ZIMBABWE_CITIES, getSuburbsForCity } from "../../data/zimbabweLocations";
 import { PaynowModal, PaynowPaymentDetails, PaynowReceipt } from "../payment/PaynowModal";
 import { useAuth } from "../../context/AuthContext";
+import { useCategories } from "../../context/CategoryContext";
 import {
   Search,
   Filter,
@@ -35,43 +35,6 @@ interface WorkerDirectoryProps {
   onNavigateToJobs?: () => void;
 }
 
-const CATEGORY_TABS: UserRole[] = [
-  "Domestic worker",
-  "Maid",
-  "Part-time maid",
-  "Nanny",
-  "Caregiver",
-  "Housekeeper",
-  "Shop assistant",
-  "General hand",
-  "Caretaker",
-  "Doctor",
-  "General cleaner",
-  "Mobile carwasher",
-  "Appliance repairer",
-  "Locksmith",
-  "Tree cutter",
-  "Farm worker",
-  "Cook",
-  "Satellite dish installer",
-  "Fumigation specialist",
-  "Painter",
-  "Curtain installer",
-  "Interior designer",
-  "Part-time laundry worker",
-  "Sofa & carpet cleaner",
-  "Pavement cleaner",
-  "Gardener",
-  "Driver",
-  "Electrician",
-  "Plumber",
-  "Builder",
-  "Carpenter",
-  "Cleaner",
-  "Chef",
-  "Nurse aide",
-];
-
 export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
   selectedRole,
   selectedCity,
@@ -83,8 +46,8 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
   onNavigateToJobs,
 }) => {
   const { setIsEditProfileModalOpen } = useAuth();
-  const [workersList, setWorkersList] = useState<WorkerProfile[]>(SAMPLE_WORKERS);
-  const [activeCategory, setActiveCategory] = useState<UserRole | "All">("All");
+  const { publicCategories, allWorkers, initiateFeaturedPayment, confirmFeaturedPayment, updateWorkerProfile } = useCategories();
+  const [activeCategory, setActiveCategory] = useState<string>("All");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedWorker, setSelectedWorker] = useState<WorkerProfile | null>(null);
   const [cityFilter, setCityFilter] = useState<string>(selectedCity || "Harare");
@@ -97,6 +60,7 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
   const [isPaynowOpen, setIsPaynowOpen] = useState(false);
   const [paynowDetails, setPaynowDetails] = useState<PaynowPaymentDetails | null>(null);
   const [targetWorkerToFeature, setTargetWorkerToFeature] = useState<WorkerProfile | null>(null);
+  const [pendingPaymentRef, setPendingPaymentRef] = useState<string | null>(null);
 
   const suburbs = getSuburbsForCity(cityFilter);
 
@@ -108,52 +72,61 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
   const handleTriggerCardFeature = (worker: WorkerProfile, e: React.MouseEvent) => {
     e.stopPropagation();
     setTargetWorkerToFeature(worker);
+    const res = initiateFeaturedPayment(worker.id, worker.fullName, worker.role, "Paynow USD");
+    setPendingPaymentRef(res.payment.paymentReference);
     setPaynowDetails({
       title: `⭐ Place ${worker.fullName} on Featured Maid List (30 Days)`,
       amountUSD: 3.0,
       serviceType: "featured_maid",
       targetId: worker.id,
       targetName: worker.fullName,
+      customReference: res.payment.paymentReference,
     });
     setIsPaynowOpen(true);
   };
 
   const handlePaynowFeatureSuccess = (receipt: PaynowReceipt) => {
-    if (!targetWorkerToFeature) return;
-    const updated = workersList.map((w) =>
-      w.id === targetWorkerToFeature.id
-        ? {
-            ...w,
-            isFeatured: true,
-            featuredExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-          }
-        : w
-    );
-    setWorkersList(updated);
-    if (selectedWorker && selectedWorker.id === targetWorkerToFeature.id) {
-      setSelectedWorker({
-        ...selectedWorker,
+    const ref = receipt.paynowReference || receipt.transactionReference;
+    if (pendingPaymentRef) {
+      confirmFeaturedPayment(pendingPaymentRef, ref);
+    } else if (targetWorkerToFeature) {
+      const res = initiateFeaturedPayment(targetWorkerToFeature.id, targetWorkerToFeature.fullName, targetWorkerToFeature.role, "Paynow USD");
+      confirmFeaturedPayment(res.payment.paymentReference, ref);
+    }
+    if (targetWorkerToFeature) {
+      const updatedWorker: WorkerProfile = {
+        ...targetWorkerToFeature,
         isFeatured: true,
         featuredExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      });
+      };
+      updateWorkerProfile(updatedWorker.id, updatedWorker);
+      if (selectedWorker && selectedWorker.id === targetWorkerToFeature.id) {
+        setSelectedWorker(updatedWorker);
+      }
     }
   };
 
   const handleUpdateWorker = (updated: WorkerProfile) => {
-    setWorkersList((prev) => prev.map((w) => (w.id === updated.id ? updated : w)));
+    updateWorkerProfile(updated.id, updated);
     if (selectedWorker && selectedWorker.id === updated.id) {
       setSelectedWorker(updated);
     }
   };
 
-  const filteredWorkers = workersList
+  const filteredWorkers = allWorkers
     .filter((worker) => {
       // Exclude blacklisted/restricted candidates from public search
       if (worker.isRestricted) return false;
 
       const matchesVerified = !verifiedOnlyFilter || worker.isVerified;
       const matchesFeatured = !featuredOnlyFilter || worker.isFeatured;
-      const matchesCategory = activeCategory === "All" || worker.role === activeCategory;
+      
+      // Match category name flexibly against role
+      const matchesCategory =
+        activeCategory === "All" ||
+        worker.role.toLowerCase().includes(activeCategory.toLowerCase()) ||
+        activeCategory.toLowerCase().includes(worker.role.toLowerCase());
+
       const matchesCity = !cityFilter || worker.city.toLowerCase() === cityFilter.toLowerCase() || cityFilter === "All Cities";
       const matchesSuburb = suburbFilter === "All Suburbs" || worker.suburb.toLowerCase() === suburbFilter.toLowerCase();
       const matchesSearch =
@@ -331,20 +304,20 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
             <span>⭐ Featured Maids ($3 Boosted)</span>
           </button>
 
-          {CATEGORY_TABS.map((cat) => (
+          {publicCategories.map((cat) => (
             <button
-              key={cat}
+              key={cat.id}
               onClick={() => {
-                setActiveCategory(cat);
+                setActiveCategory(cat.name);
                 setFeaturedOnlyFilter(false);
               }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                activeCategory === cat && !featuredOnlyFilter
+                activeCategory === cat.name && !featuredOnlyFilter
                   ? "bg-emerald-800 text-white shadow"
                   : "bg-slate-100 text-slate-700 hover:bg-slate-200"
               }`}
             >
-              {cat}
+              {cat.name}
             </button>
           ))}
         </div>

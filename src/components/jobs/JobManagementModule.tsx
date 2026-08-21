@@ -46,6 +46,7 @@ import { ALL_ZIMBABWE_CITIES, getSuburbsForCity } from "../../data/zimbabweLocat
 import { EmployerHiringModal } from "./EmployerHiringModal";
 import { usePlatform } from "../../context/PlatformContext";
 import { useAuth } from "../../context/AuthContext";
+import { useCategories } from "../../context/CategoryContext";
 
 interface JobManagementModuleProps {
   currency?: "USD" | "ZWG";
@@ -175,7 +176,8 @@ const JOB_TEMPLATES = [
 export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ currency = "USD", onNavigateToMarketplace }) => {
   const { recordHiringNotification } = usePlatform();
   const { currentUser } = useAuth();
-  const [jobsList, setJobsList] = useState<JobPosting[]>(INITIAL_JOBS);
+  const { publicCategories, categories, allJobs } = useCategories();
+  const [jobsList, setJobsList] = useState<JobPosting[]>(allJobs && allJobs.length > 0 ? allJobs : INITIAL_JOBS);
   const [activeTab, setActiveTab] = useState<
     "all" | "featured" | "recommended" | "nearby" | "expired" | "drafts" | "calculator" | "templates"
   >("all");
@@ -665,20 +667,12 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
                 onChange={e => setSelectedRole(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
-                <option value="All">All Worker Roles</option>
-                <option value="Domestic worker">Domestic worker</option>
-                <option value="Maid">Maid</option>
-                <option value="Part-time maid">Part-time maid</option>
-                <option value="Nanny">Nanny</option>
-                <option value="Housekeeper">Housekeeper</option>
-                <option value="Caregiver">Caregiver</option>
-                <option value="Gardener">Gardener</option>
-                <option value="Driver">Driver</option>
-                <option value="Chef">Chef</option>
-                <option value="Electrician">Electrician</option>
-                <option value="Plumber">Plumber</option>
-                <option value="Nurse aide">Nurse aide</option>
-                <option value="Cleaner">Cleaner</option>
+                <option value="All">All Active Categories ({publicCategories.length})</option>
+                {publicCategories.map((c) => (
+                  <option key={c.id} value={c.name}>
+                    {c.name} ({c.activeJobCount} Openings)
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -1188,25 +1182,19 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
 
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className="font-bold text-slate-700 block mb-1">Role Needed</label>
+                  <label className="font-bold text-slate-700 block mb-1">Role / Category Needed</label>
                   <select
                     value={formData.roleNeeded}
                     onChange={e => setFormData({ ...formData, roleNeeded: e.target.value as UserRole })}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 font-bold"
                   >
-                    <option value="Domestic worker">Domestic worker</option>
-                    <option value="Maid">Maid</option>
-                    <option value="Part-time maid">Part-time maid</option>
-                    <option value="Nanny">Nanny</option>
-                    <option value="Housekeeper">Housekeeper</option>
-                    <option value="Caregiver">Caregiver</option>
-                    <option value="Gardener">Gardener</option>
-                    <option value="Driver">Driver</option>
-                    <option value="Chef">Chef</option>
-                    <option value="Electrician">Electrician</option>
-                    <option value="Plumber">Plumber</option>
-                    <option value="Nurse aide">Nurse aide</option>
-                    <option value="Cleaner">Cleaner</option>
+                    {categories
+                      .filter((c) => c.status === "Active")
+                      .map((c) => (
+                        <option key={c.id} value={c.name}>
+                          {c.name} ({c.type})
+                        </option>
+                      ))}
                   </select>
                 </div>
 

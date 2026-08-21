@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { PlatformProvider } from "./context/PlatformContext";
+import { CategoryProvider } from "./context/CategoryContext";
 import { AuthModal } from "./components/auth/AuthModal";
 import { Header } from "./components/Header";
 import { MobileBottomNav } from "./components/MobileBottomNav";
@@ -315,7 +316,9 @@ export default function App() {
   return (
     <AuthProvider>
       <PlatformProvider>
-        <AppContent />
+        <CategoryProvider>
+          <AppContent />
+        </CategoryProvider>
       </PlatformProvider>
     </AuthProvider>
   );

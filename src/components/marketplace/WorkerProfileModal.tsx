@@ -41,6 +41,7 @@ import { DocumentVaultModal } from "../common/DocumentVaultModal";
 import { ImageLightboxModal, LightboxImageItem } from "../common/ImageLightboxModal";
 import { PaynowModal, PaynowPaymentDetails, PaynowReceipt } from "../payment/PaynowModal";
 import { useAuth } from "../../context/AuthContext";
+import { useCategories } from "../../context/CategoryContext";
 
 interface WorkerProfileModalProps {
   worker: WorkerProfile | null;
@@ -66,6 +67,7 @@ export const WorkerProfileModal: React.FC<WorkerProfileModalProps> = ({
   onOpenEditProfile,
 }) => {
   const { currentUser, setIsEditProfileModalOpen } = useAuth();
+  const { initiateFeaturedPayment, confirmFeaturedPayment } = useCategories();
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const [selectedPortfolioItem, setSelectedPortfolioItem] = useState<PortfolioItem | null>(null);
   const [isViewerOpen, setIsViewerOpen] = useState<boolean>(false);
@@ -81,20 +83,32 @@ export const WorkerProfileModal: React.FC<WorkerProfileModalProps> = ({
   // Paynow State for $3 Featured Listing
   const [isPaynowOpen, setIsPaynowOpen] = useState(false);
   const [paynowDetails, setPaynowDetails] = useState<PaynowPaymentDetails | null>(null);
+  const [activePaymentRef, setActivePaymentRef] = useState<string | null>(null);
 
   const handleInitiateFeaturedPaynow = () => {
+    if (!worker) return;
+    const res = initiateFeaturedPayment(worker.id, worker.fullName, worker.role, "Paynow USD");
+    setActivePaymentRef(res.payment.paymentReference);
     setPaynowDetails({
-      title: `⭐ Feature ${worker?.fullName} on Featured Maid List (30 Days)`,
+      title: `⭐ Feature ${worker.fullName} on Featured Maid List (30 Days)`,
       amountUSD: 3.0,
       serviceType: "featured_maid",
-      targetId: worker?.id,
-      targetName: worker?.fullName,
+      targetId: worker.id,
+      targetName: worker.fullName,
+      customReference: res.payment.paymentReference,
     });
     setIsPaynowOpen(true);
   };
 
   const handlePaynowSuccess = (receipt: PaynowReceipt) => {
     if (!worker) return;
+    const ref = receipt.paynowReference || receipt.transactionReference;
+    if (activePaymentRef) {
+      confirmFeaturedPayment(activePaymentRef, ref);
+    } else {
+      const res = initiateFeaturedPayment(worker.id, worker.fullName, worker.role, "Paynow USD");
+      confirmFeaturedPayment(res.payment.paymentReference, ref);
+    }
     const updated: WorkerProfile = {
       ...worker,
       isFeatured: true,

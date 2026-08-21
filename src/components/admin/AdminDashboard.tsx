@@ -4,6 +4,7 @@ import { EnterpriseSecurityCenter } from "./EnterpriseSecurityCenter";
 import { TestingStrategyCenter } from "./TestingStrategyCenter";
 import { PerformanceReportsModule } from "./PerformanceReportsModule";
 import { AgencyManagementCenter } from "./AgencyManagementCenter";
+import { CategoryManagementCenter } from "./CategoryManagementCenter";
 import { WhatsAppProfileImportModal } from "../chat/WhatsAppProfileImportModal";
 import { convertRegistrationToWorkerProfile } from "../../utils/whatsappTemplates";
 import { ZMC_OFFICIAL_LOGO } from "../common/BrandLogo";
@@ -112,6 +113,7 @@ export const AdminDashboard: React.FC = () => {
   } = useAuth();
 
   const [activeTab, setActiveTab] = useState<
+    | "categories"
     | "profile-approvals"
     | "job-approvals"
     | "agencies"
@@ -130,7 +132,7 @@ export const AdminDashboard: React.FC = () => {
     | "security"
     | "qa-testing"
     | "performance-reports"
-  >("profile-approvals");
+  >("categories");
 
   // Filters
   const [timeRange, setTimeRange] = useState("This Month");
@@ -425,6 +427,7 @@ export const AdminDashboard: React.FC = () => {
       {/* Main Admin Navigation Tabs */}
       <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-2 print:hidden">
         {[
+          { id: "categories", label: "Categories & $3 Featured System", icon: Layers, highlight: true },
           { id: "profile-approvals", label: `Profile Approvals (${pendingWorkerProfiles.length})`, icon: UserCheck, badge: pendingWorkerProfiles.length, highlight: true },
           { id: "job-approvals", label: `Job Approvals (${pendingJobPostings.length})`, icon: Briefcase, badge: pendingJobPostings.length, highlight: true },
           {
@@ -474,6 +477,9 @@ export const AdminDashboard: React.FC = () => {
           );
         })}
       </div>
+
+      {/* SECTION 00: DYNAMIC CATEGORY & $3 FEATURED MANAGEMENT */}
+      {activeTab === "categories" && <CategoryManagementCenter />}
 
       {/* SECTION 0A: CANDIDATE PROFILE APPROVALS */}
       {activeTab === "profile-approvals" && (
