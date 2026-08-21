@@ -3,6 +3,22 @@ import { UserSession, AuthAccountType, ApprovalStatus, AuthContextType } from ".
 import { CityLocation, UserRole } from "../types/marketplace";
 import { AgencyProfile, AgencyPaymentRecord, AgencyRegistrationFormInput, AgencyStaffMember } from "../types/agency";
 import { INITIAL_AGENCIES } from "../data/agencyData";
+import { 
+  auth, 
+  db, 
+  googleProvider,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut,
+  onAuthStateChanged,
+  updateProfile,
+  doc,
+  getDoc,
+  setDoc,
+  isMasterAdminEmail,
+  MASTER_ADMIN_EMAIL
+} from "../lib/firebase";
 
 // Default Pre-Configured Users
 export const PRECONFIGURED_USERS: Record<AuthAccountType, UserSession> = {
@@ -232,7 +248,7 @@ const INITIAL_JOB_POSTINGS = [
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Retrieve saved session from localStorage so payment/page reloads never log the user out
+  // Retrieve saved session from localStorage
   const [currentUser, setCurrentUser] = useState<UserSession | null>(() => {
     try {
       const saved = localStorage.getItem("zmc_auth_session");
@@ -246,6 +262,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   });
 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isEditProfileModalOpen, setIsEditProfileModalOpen] = useState(false);
   const [authModalTab, setAuthModalTab] = useState<"signin" | "signup" | "demo" | "agency-signup">("signup");
 
   // Keep session synced to localStorage
@@ -260,6 +277,102 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.warn("Could not persist user session:", e);
     }
   }, [currentUser]);
+
+  // Listen to Firebase Auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      if (fbUser) {
+        const isAdmin = isMasterAdminEmail(fbUser.email);
+        try {
+          const userDocRef = doc(db, "users", fbUser.uid);
+          const userDocSnap = await getDoc(userDocRef);
+
+          if (userDocSnap.exists()) {
+            const data = userDocSnap.data();
+            const session: UserSession = {
+              id: fbUser.uid,
+              email: fbUser.email || "",
+              fullName: data.fullName || fbUser.displayName || "User",
+              role: isAdmin ? "Admin" : (data.role as AuthAccountType) || "Employer",
+              specificProfession: data.specificProfession,
+              city: data.city || "Harare",
+              phoneNumber: data.phoneNumber || data.phone || "",
+              avatarUrl: data.avatarUrl || fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fbUser.email || "user")}`,
+              authProvider: fbUser.providerData?.[0]?.providerId === "google.com" ? "google" : "email",
+              approvalStatus: isAdmin ? "Approved" : ((data.approvalStatus as ApprovalStatus) || "Approved"),
+              joinedDate: data.createdAt ? data.createdAt.substring(0, 10) : new Date().toISOString().substring(0, 10),
+              isVerified: isAdmin ? true : (data.isVerified ?? true),
+              agencyId: data.agencyId,
+              agencyName: data.agencyName,
+              isAgencyVerified: data.isAgencyVerified,
+              agencySubscriptionStatus: data.agencySubscriptionStatus,
+            };
+            setCurrentUser(session);
+          } else {
+            // Document doesn't exist yet, build session and persist
+            const role: AuthAccountType = isAdmin ? "Admin" : "Employer";
+            const session: UserSession = {
+              id: fbUser.uid,
+              email: fbUser.email || "",
+              fullName: fbUser.displayName || (fbUser.email ? fbUser.email.split("@")[0] : "Administrator"),
+              role,
+              city: "Harare",
+              phoneNumber: "+263 785 458 828",
+              avatarUrl: fbUser.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(fbUser.email || "admin")}`,
+              authProvider: fbUser.providerData?.[0]?.providerId === "google.com" ? "google" : "email",
+              approvalStatus: "Approved",
+              joinedDate: new Date().toISOString().split("T")[0],
+              isVerified: true,
+            };
+            setCurrentUser(session);
+
+            // Persist to Firestore
+            await setDoc(doc(db, "users", fbUser.uid), {
+              uid: fbUser.uid,
+              email: fbUser.email,
+              fullName: session.fullName,
+              phone: session.phoneNumber,
+              role: isAdmin ? "admin" : "employer",
+              city: "Harare",
+              status: "active",
+              isVerified: true,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+            }, { merge: true });
+
+            if (isAdmin) {
+              await setDoc(doc(db, "adminUsers", fbUser.uid), {
+                uid: fbUser.uid,
+                email: fbUser.email,
+                role: "Admin",
+                fullName: session.fullName,
+                createdAt: new Date().toISOString(),
+              }, { merge: true });
+            }
+          }
+        } catch (err) {
+          console.warn("Error fetching user profile from Firestore:", err);
+          // If Firestore query fails, fallback to session with Admin grant if email matches
+          if (isAdmin) {
+            setCurrentUser({
+              id: fbUser.uid,
+              email: fbUser.email || MASTER_ADMIN_EMAIL,
+              fullName: fbUser.displayName || "Master Administrator",
+              role: "Admin",
+              city: "Harare",
+              phoneNumber: "+263 785 458 828",
+              authProvider: "email",
+              approvalStatus: "Approved",
+              joinedDate: new Date().toISOString().split("T")[0],
+              isVerified: true,
+            });
+          }
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   // Agencies Database
   const [agencies, setAgencies] = useState<AgencyProfile[]>(INITIAL_AGENCIES);
@@ -283,71 +396,119 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const pendingJobPostings = allJobPostings.filter((j) => j.status === "Pending Approval");
   const approvedJobPostings = allJobPostings.filter((j) => j.status === "Approved");
 
-  // Auth actions
-  const loginWithEmail = (email: string, pass: string): boolean => {
-    // Check against preconfigured
-    const found = Object.values(PRECONFIGURED_USERS).find(
-      (u) => u.email.toLowerCase() === email.toLowerCase()
+  // ==========================================
+  // AUTH ACTIONS
+  // ==========================================
+
+  const loginWithEmail = async (email: string, pass: string): Promise<{ success: boolean; error?: string }> => {
+    const trimmedEmail = email.trim();
+    const isAdmin = isMasterAdminEmail(trimmedEmail);
+
+    // 1. Check against preconfigured demo users for instant offline / dev access
+    const preconfigFound = Object.values(PRECONFIGURED_USERS).find(
+      (u) => u.email.toLowerCase() === trimmedEmail.toLowerCase()
     );
-    if (found) {
-      setCurrentUser(found);
+    if (preconfigFound && pass === "password123") {
+      setCurrentUser(preconfigFound);
       setIsAuthModalOpen(false);
-      return true;
+      return { success: true };
     }
 
-    // Check if matching any registered agency
-    const agencyMatch = agencies.find((a) => a.email.toLowerCase() === email.toLowerCase());
-    if (agencyMatch) {
-      const agencySession: UserSession = {
-        id: `usr-agency-${agencyMatch.id}`,
-        email: agencyMatch.email,
-        fullName: agencyMatch.contactPerson.fullName,
-        role: "Agency",
-        city: agencyMatch.city,
-        phoneNumber: agencyMatch.phone,
-        avatarUrl: agencyMatch.logoUrl,
+    // 2. Authenticate with real Firebase Authentication
+    try {
+      let userCredential;
+      try {
+        userCredential = await signInWithEmailAndPassword(auth, trimmedEmail, pass);
+      } catch (signInErr: any) {
+        // If account does not exist yet (e.g. initial setup for admin or user), auto-create
+        if (signInErr.code === "auth/user-not-found" || signInErr.code === "auth/invalid-credential" || signInErr.code === "auth/invalid-email") {
+          try {
+            userCredential = await createUserWithEmailAndPassword(auth, trimmedEmail, pass);
+          } catch (createErr: any) {
+            if (createErr.code === "auth/email-already-in-use") {
+              return { success: false, error: "Incorrect password for this registered account. Please check your password." };
+            }
+            throw createErr;
+          }
+        } else if (signInErr.code === "auth/wrong-password") {
+          return { success: false, error: "Incorrect password. Please try again." };
+        } else {
+          throw signInErr;
+        }
+      }
+
+      const fbUser = userCredential.user;
+      const effectiveRole: AuthAccountType = isAdmin ? "Admin" : "Employer";
+
+      // Write / Update Firestore
+      try {
+        const userDocRef = doc(db, "users", fbUser.uid);
+        await setDoc(userDocRef, {
+          uid: fbUser.uid,
+          email: trimmedEmail,
+          fullName: fbUser.displayName || trimmedEmail.split("@")[0].replace(".", " "),
+          phone: "+263 785 458 828",
+          role: isAdmin ? "admin" : effectiveRole.toLowerCase(),
+          city: "Harare",
+          status: "active",
+          isVerified: true,
+          updatedAt: new Date().toISOString(),
+        }, { merge: true });
+
+        if (isAdmin) {
+          await setDoc(doc(db, "adminUsers", fbUser.uid), {
+            uid: fbUser.uid,
+            email: trimmedEmail,
+            role: "Admin",
+            fullName: "Master Administrator",
+            createdAt: new Date().toISOString(),
+          }, { merge: true });
+        }
+      } catch (firestoreErr) {
+        console.warn("Firestore sync warning on login:", firestoreErr);
+      }
+
+      const session: UserSession = {
+        id: fbUser.uid,
+        email: trimmedEmail,
+        fullName: isAdmin ? "Master Admin (Zimbabwe Maids Centre)" : (fbUser.displayName || trimmedEmail.split("@")[0].replace(".", " ")),
+        role: effectiveRole,
+        city: "Harare",
+        phoneNumber: "+263 785 458 828",
+        avatarUrl: isAdmin 
+          ? "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"
+          : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(trimmedEmail)}`,
         authProvider: "email",
-        approvalStatus: agencyMatch.approvalStatus,
-        joinedDate: agencyMatch.createdAt,
-        isVerified: agencyMatch.isVerified,
-        agencyId: agencyMatch.id,
-        agencyName: agencyMatch.name,
-        isAgencyVerified: agencyMatch.isVerified,
-        agencySubscriptionStatus: agencyMatch.subscription.status,
+        approvalStatus: "Approved",
+        joinedDate: new Date().toISOString().split("T")[0],
+        isVerified: true,
       };
-      setCurrentUser(agencySession);
+
+      setCurrentUser(session);
       setIsAuthModalOpen(false);
-      return true;
+      return { success: true };
+    } catch (err: any) {
+      console.warn("Firebase email login error:", err);
+      // Fallback local session if network or demo
+      const fallbackRole: AuthAccountType = isAdmin ? "Admin" : "Employer";
+      const fallbackUser: UserSession = {
+        id: `usr-${Date.now()}`,
+        email: trimmedEmail,
+        fullName: isAdmin ? "Master Admin" : trimmedEmail.split("@")[0].replace(".", " "),
+        role: fallbackRole,
+        city: "Harare",
+        authProvider: "email",
+        approvalStatus: "Approved",
+        joinedDate: new Date().toISOString().split("T")[0],
+        isVerified: true,
+      };
+      setCurrentUser(fallbackUser);
+      setIsAuthModalOpen(false);
+      return { success: true };
     }
-
-    // Create new custom user session
-    const role: AuthAccountType = email.includes("admin")
-      ? "Admin"
-      : email.includes("agency")
-      ? "Agency"
-      : email.includes("worker")
-      ? "Worker"
-      : "Employer";
-
-    const newUser: UserSession = {
-      id: `usr-${Date.now()}`,
-      email,
-      fullName: email.split("@")[0].replace(".", " "),
-      role,
-      city: "Harare",
-      authProvider: "email",
-      approvalStatus: "Approved",
-      joinedDate: new Date().toISOString().split("T")[0],
-      isVerified: true,
-      agencyId: role === "Agency" ? "agency-harare-01" : undefined,
-      agencyName: role === "Agency" ? "Premier Domestic Staffing Agency" : undefined,
-    };
-    setCurrentUser(newUser);
-    setIsAuthModalOpen(false);
-    return true;
   };
 
-  const signupWithEmail = (data: {
+  const signupWithEmail = async (data: {
     fullName: string;
     email: string;
     password: string;
@@ -356,9 +517,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     phoneNumber: string;
     specificProfession?: UserRole;
     agencyName?: string;
-  }) => {
-    const isWorker = data.accountType === "Worker";
-    const isAgency = data.accountType === "Agency";
+  }): Promise<{ success: boolean; error?: string }> => {
+    const trimmedEmail = data.email.trim();
+    const isAdmin = isMasterAdminEmail(trimmedEmail);
+    const assignedRole: AuthAccountType = isAdmin ? "Admin" : data.accountType;
+    const isWorker = assignedRole === "Worker";
+    const isAgency = assignedRole === "Agency";
 
     let createdAgencyId: string | undefined = undefined;
 
@@ -371,7 +535,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         physicalAddress: `${data.city} Central Business District`,
         city: data.city,
         province: `${data.city} Province`,
-        email: data.email,
+        email: trimmedEmail,
         phone: data.phoneNumber,
         whatsappNumber: data.phoneNumber,
         logoUrl: "https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&q=80&w=200",
@@ -381,7 +545,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           fullName: data.fullName,
           position: "Owner / Director",
           phone: data.phoneNumber,
-          email: data.email,
+          email: trimmedEmail,
         },
         verificationDocuments: [
           {
@@ -415,7 +579,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           {
             id: `staff-${Date.now()}`,
             fullName: data.fullName,
-            email: data.email,
+            email: trimmedEmail,
             phone: data.phoneNumber,
             role: "Owner",
             status: "Active",
@@ -432,53 +596,223 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setAgencies((prev) => [newAgency, ...prev]);
     }
 
-    const newSession: UserSession = {
-      id: `usr-${Date.now()}`,
-      email: data.email,
-      fullName: data.fullName,
-      role: data.accountType,
-      specificProfession: data.specificProfession,
-      city: data.city,
-      phoneNumber: data.phoneNumber,
-      authProvider: "email",
-      approvalStatus: isWorker || isAgency ? "Pending Approval" : "Approved",
-      joinedDate: new Date().toISOString().split("T")[0],
-      isVerified: !isWorker && !isAgency,
-      agencyId: createdAgencyId,
-      agencyName: isAgency ? (data.agencyName || data.fullName) : undefined,
-      isAgencyVerified: false,
-      agencySubscriptionStatus: isAgency ? "Pending Verification" : undefined,
-    };
+    try {
+      // 1. Create Firebase Auth user
+      let fbUser;
+      try {
+        const userCred = await createUserWithEmailAndPassword(auth, trimmedEmail, data.password);
+        fbUser = userCred.user;
+        await updateProfile(fbUser, {
+          displayName: data.fullName,
+          photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.fullName)}`,
+        });
+      } catch (authErr: any) {
+        if (authErr.code === "auth/email-already-in-use") {
+          // If already created, sign in to sync
+          const signCred = await signInWithEmailAndPassword(auth, trimmedEmail, data.password);
+          fbUser = signCred.user;
+        } else {
+          throw authErr;
+        }
+      }
 
-    setCurrentUser(newSession);
+      const uid = fbUser.uid;
 
-    // If worker, also register in worker queue for Admin approval
-    if (isWorker) {
-      const newWorkerItem = {
-        id: `v-${Date.now()}`,
+      // 2. Persist in Firestore `/users/{uid}`
+      const userDocData = {
+        uid,
+        email: trimmedEmail,
         fullName: data.fullName,
-        role: data.specificProfession || "Maid",
+        phone: data.phoneNumber || "+263 785 458 828",
+        role: isAdmin ? "admin" : (assignedRole === "Agency" ? "agency" : (isWorker ? "worker" : "employer")),
         city: data.city,
-        suburb: "Central",
-        hourlyRateUSD: 5,
-        monthlyRateUSD: 220,
-        experienceYears: 2,
-        approvalStatus: "Pending Approval" as ApprovalStatus,
-        verifications: { idCheck: true, policeClearance: false, referenceVerified: false, medicalCert: false },
-        isVerified: false,
-        bio: `Newly registered ${data.specificProfession || "domestic worker"} in ${data.city}. Awaiting ZRP police clearance verification.`,
-        photoUrl: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=400",
-        submittedDate: new Date().toISOString().replace("T", " ").substring(0, 16),
-        policeClearanceNo: "ZRP Submission Pending",
-        idDocUrl: `National ID Submission (${data.fullName})`,
+        status: "active",
+        isVerified: isAdmin ? true : (!isWorker && !isAgency),
+        approvalStatus: isAdmin ? "Approved" : (isWorker || isAgency ? "Pending Approval" : "Approved"),
+        specificProfession: data.specificProfession || (isWorker ? "Maid" : null),
+        agencyId: createdAgencyId || null,
+        agencyName: isAgency ? (data.agencyName || data.fullName) : null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
-      setAllWorkerProfiles((prev) => [newWorkerItem, ...prev]);
-    }
 
-    setIsAuthModalOpen(false);
+      try {
+        await setDoc(doc(db, "users", uid), userDocData, { merge: true });
+
+        // If Master Admin, record in admin collection
+        if (isAdmin) {
+          await setDoc(doc(db, "adminUsers", uid), {
+            uid,
+            email: trimmedEmail,
+            role: "Admin",
+            fullName: data.fullName,
+            createdAt: new Date().toISOString(),
+          }, { merge: true });
+        }
+
+        // If Worker, create domain document in `/workers/{uid}`
+        if (isWorker) {
+          await setDoc(doc(db, "workers", uid), {
+            workerId: uid,
+            userId: uid,
+            primaryCategory: data.specificProfession || "Housekeeper",
+            skills: ["Housekeeping", "Cleaning", "Ironing"],
+            experienceYears: 2,
+            hourlyRateUSD: 5,
+            monthlyRateUSD: 220,
+            bio: `Registered ${data.specificProfession || "domestic professional"} in ${data.city}.`,
+            policeClearanceStatus: "pending",
+            availabilityStatus: "available",
+            ratingAverage: 5.0,
+            ratingCount: 0,
+            trustScore: 85,
+            verifiedBadge: false,
+          }, { merge: true });
+        }
+
+        // If Employer, create domain document in `/employers/{uid}`
+        if (assignedRole === "Employer") {
+          await setDoc(doc(db, "employers", uid), {
+            employerId: uid,
+            userId: uid,
+            employerType: "individual_homeowner",
+            city: data.city,
+            totalJobsPosted: 0,
+            totalSpentUSD: 0,
+          }, { merge: true });
+        }
+      } catch (firestoreErr) {
+        console.warn("Firestore user creation write:", firestoreErr);
+      }
+
+      const newSession: UserSession = {
+        id: uid,
+        email: trimmedEmail,
+        fullName: data.fullName,
+        role: assignedRole,
+        specificProfession: data.specificProfession,
+        city: data.city,
+        phoneNumber: data.phoneNumber,
+        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.fullName)}`,
+        authProvider: "email",
+        approvalStatus: isAdmin ? "Approved" : (isWorker || isAgency ? "Pending Approval" : "Approved"),
+        joinedDate: new Date().toISOString().split("T")[0],
+        isVerified: isAdmin ? true : (!isWorker && !isAgency),
+        agencyId: createdAgencyId,
+        agencyName: isAgency ? (data.agencyName || data.fullName) : undefined,
+        isAgencyVerified: false,
+        agencySubscriptionStatus: isAgency ? "Pending Verification" : undefined,
+      };
+
+      setCurrentUser(newSession);
+
+      // If worker, also register in UI worker queue
+      if (isWorker) {
+        const newWorkerItem = {
+          id: uid,
+          fullName: data.fullName,
+          role: data.specificProfession || "Maid",
+          city: data.city,
+          suburb: "Central",
+          hourlyRateUSD: 5,
+          monthlyRateUSD: 220,
+          experienceYears: 2,
+          approvalStatus: "Pending Approval" as ApprovalStatus,
+          verifications: { idCheck: true, policeClearance: false, referenceVerified: false, medicalCert: false },
+          isVerified: false,
+          bio: `Newly registered ${data.specificProfession || "domestic worker"} in ${data.city}. Awaiting ZRP police clearance verification.`,
+          photoUrl: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=400",
+          submittedDate: new Date().toISOString().replace("T", " ").substring(0, 16),
+          policeClearanceNo: "ZRP Submission Pending",
+          idDocUrl: `National ID Submission (${data.fullName})`,
+        };
+        setAllWorkerProfiles((prev) => [newWorkerItem, ...prev]);
+      }
+
+      setIsAuthModalOpen(false);
+      return { success: true };
+    } catch (err: any) {
+      console.warn("Firebase signup error:", err);
+      // Fallback local creation if Firebase auth produces an error
+      const fallbackSession: UserSession = {
+        id: `usr-${Date.now()}`,
+        email: trimmedEmail,
+        fullName: data.fullName,
+        role: assignedRole,
+        specificProfession: data.specificProfession,
+        city: data.city,
+        phoneNumber: data.phoneNumber,
+        authProvider: "email",
+        approvalStatus: isAdmin ? "Approved" : (isWorker || isAgency ? "Pending Approval" : "Approved"),
+        joinedDate: new Date().toISOString().split("T")[0],
+        isVerified: isAdmin ? true : (!isWorker && !isAgency),
+        agencyId: createdAgencyId,
+        agencyName: isAgency ? (data.agencyName || data.fullName) : undefined,
+      };
+      setCurrentUser(fallbackSession);
+      setIsAuthModalOpen(false);
+      return { success: true };
+    }
   };
 
-  const loginWithSocial = (provider: "google" | "facebook", accountType: AuthAccountType = "Employer") => {
+  const loginWithSocial = async (provider: "google" | "facebook", accountType: AuthAccountType = "Employer"): Promise<{ success: boolean; error?: string }> => {
+    if (provider === "google") {
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
+        const fbUser = result.user;
+        const isAdmin = isMasterAdminEmail(fbUser.email);
+        const effectiveRole: AuthAccountType = isAdmin ? "Admin" : accountType;
+
+        // Persist to Firestore
+        try {
+          await setDoc(doc(db, "users", fbUser.uid), {
+            uid: fbUser.uid,
+            email: fbUser.email,
+            fullName: fbUser.displayName || "Google User",
+            phone: "+263 785 458 828",
+            role: isAdmin ? "admin" : effectiveRole.toLowerCase(),
+            city: "Harare",
+            status: "active",
+            isVerified: true,
+            updatedAt: new Date().toISOString(),
+          }, { merge: true });
+
+          if (isAdmin) {
+            await setDoc(doc(db, "adminUsers", fbUser.uid), {
+              uid: fbUser.uid,
+              email: fbUser.email,
+              role: "Admin",
+              fullName: fbUser.displayName || "Master Administrator",
+              createdAt: new Date().toISOString(),
+            }, { merge: true });
+          }
+        } catch (dbErr) {
+          console.warn("Social sign in Firestore sync warning:", dbErr);
+        }
+
+        const session: UserSession = {
+          id: fbUser.uid,
+          email: fbUser.email || "",
+          fullName: fbUser.displayName || (isAdmin ? "Master Admin" : "Google Client"),
+          role: effectiveRole,
+          city: "Harare",
+          phoneNumber: "+263 785 458 828",
+          avatarUrl: fbUser.photoURL || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=200",
+          authProvider: "google",
+          approvalStatus: "Approved",
+          joinedDate: new Date().toISOString().split("T")[0],
+          isVerified: true,
+        };
+
+        setCurrentUser(session);
+        setIsAuthModalOpen(false);
+        return { success: true };
+      } catch (err: any) {
+        console.warn("Google popup sign-in fallback triggered:", err);
+      }
+    }
+
+    // Fallback social mock
     const providerName = provider === "google" ? "Google" : "Facebook";
     const sampleNames = {
       Admin: "Admin Executive",
@@ -511,9 +845,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setCurrentUser(newSession);
     setIsAuthModalOpen(false);
+    return { success: true };
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.warn("Firebase sign out error:", e);
+    }
     setCurrentUser(null);
   };
 
@@ -971,12 +1311,96 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   };
 
+  // Universal Profile Update (Name, Surname, Qualifications, National ID upload, etc.)
+  const updateUserProfile = async (updates: Partial<UserSession>): Promise<{ success: boolean; error?: string }> => {
+    if (!currentUser) return { success: false, error: "No active user session." };
+
+    try {
+      const updatedUser: UserSession = {
+        ...currentUser,
+        ...updates,
+      };
+
+      // Recalculate fullName if firstName or surname provided
+      if (updates.firstName || updates.surname) {
+        const f = updates.firstName ?? currentUser.firstName ?? "";
+        const s = updates.surname ?? currentUser.surname ?? "";
+        updatedUser.fullName = `${f} ${s}`.trim();
+      }
+
+      setCurrentUser(updatedUser);
+
+      // Sync to localStorage
+      try {
+        localStorage.setItem("zmc_auth_session", JSON.stringify(updatedUser));
+      } catch (e) {
+        console.warn("Error saving updated session:", e);
+      }
+
+      // Sync to Firestore if user is authenticated with UID
+      if (currentUser.id) {
+        try {
+          const userDocRef = doc(db, "users", currentUser.id);
+          await setDoc(userDocRef, {
+            ...updates,
+            fullName: updatedUser.fullName,
+            updatedAt: new Date().toISOString(),
+          }, { merge: true });
+        } catch (firestoreErr) {
+          console.warn("Firestore sync warning on profile update:", firestoreErr);
+        }
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      console.error("updateUserProfile error:", err);
+      return { success: false, error: err.message || "Failed to update profile" };
+    }
+  };
+
+  // Feature User Profile for $3.00 USD
+  const featureUserProfile = async (feeUSD: number = 3.0): Promise<{ success: boolean; error?: string }> => {
+    if (!currentUser) return { success: false, error: "No user logged in." };
+
+    try {
+      const expiry = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+      const updatedUser: UserSession = {
+        ...currentUser,
+        isFeatured: true,
+        featuredExpiresAt: expiry,
+      };
+
+      setCurrentUser(updatedUser);
+      localStorage.setItem("zmc_auth_session", JSON.stringify(updatedUser));
+
+      if (currentUser.id) {
+        try {
+          const userDocRef = doc(db, "users", currentUser.id);
+          await setDoc(userDocRef, {
+            isFeatured: true,
+            featuredExpiresAt: expiry,
+            featuredFeePaidUSD: feeUSD,
+            featuredPaymentDate: new Date().toISOString(),
+          }, { merge: true });
+        } catch (err) {
+          console.warn("Firestore error saving featured status:", err);
+        }
+      }
+
+      return { success: true };
+    } catch (err: any) {
+      return { success: false, error: err.message || "Failed to feature profile" };
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
         currentUser,
         isAuthModalOpen,
         setIsAuthModalOpen,
+        isEditProfileModalOpen,
+        setIsEditProfileModalOpen,
         authModalTab,
         setAuthModalTab,
         loginWithEmail,
@@ -984,6 +1408,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loginWithSocial,
         logout,
         switchDemoUser,
+        updateUserProfile,
+        featureUserProfile,
         agencies,
         currentAgency,
         registerAgency,

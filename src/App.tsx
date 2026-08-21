@@ -32,10 +32,12 @@ import { NotificationCenterModal } from "./components/common/NotificationCenterM
 import { LegalComplianceModal } from "./components/common/LegalComplianceModal";
 import { AccessibilitySettingsModal } from "./components/common/AccessibilitySettingsModal";
 import { MarketingHubModal } from "./components/marketing/MarketingHubModal";
+import { EditProfileModal } from "./components/profile/EditProfileModal";
+import { PaynowModal, PaynowPaymentDetails, PaynowReceipt } from "./components/payment/PaynowModal";
 import { UserRole, CityLocation, WorkerProfile, PlacementFeeRecord } from "./types/marketplace";
 
 function AppContent() {
-  const { currentUser } = useAuth();
+  const { currentUser, isEditProfileModalOpen, setIsEditProfileModalOpen, featureUserProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<
     "landing" | "architecture" | "employer" | "maid" | "marketplace" | "worker" | "agency" | "jobs" | "search" | "whatsapp" | "whatsapp-upload" | "ai-studio" | "payments" | "admin" | "reviews" | "reports"
   >("landing");
@@ -43,6 +45,10 @@ function AppContent() {
   const [selectedRole, setSelectedRole] = useState<UserRole>("Domestic worker");
   const [selectedCity, setSelectedCity] = useState<CityLocation>("Harare");
   const [currency, setCurrency] = useState<"USD" | "ZWG">("USD");
+
+  // Global Paynow Modal for $3 Featured Listing
+  const [isGlobalPaynowOpen, setIsGlobalPaynowOpen] = useState<boolean>(false);
+  const [globalPaynowDetails, setGlobalPaynowDetails] = useState<PaynowPaymentDetails | null>(null);
 
   // Premium Access & Placement States
   const [isPremiumEmployer, setIsPremiumEmployer] = useState<boolean>(false);
@@ -249,6 +255,37 @@ function AppContent() {
           if (tab === "marketplace" || tab === "jobs" || tab === "payments") {
             setActiveTab(tab as any);
           }
+        }}
+      />
+
+      {/* Universal Edit Profile Modal */}
+      <EditProfileModal
+        isOpen={isEditProfileModalOpen}
+        onClose={() => setIsEditProfileModalOpen(false)}
+        onOpenPaynowForFeature={() => {
+          if (currentUser) {
+            setGlobalPaynowDetails({
+              title: "Featured Maid Listing ($3 USD)",
+              amountUSD: 3,
+              serviceType: "featured_worker",
+              targetId: currentUser.uid,
+              targetName: currentUser.fullName,
+            });
+            setIsGlobalPaynowOpen(true);
+          }
+        }}
+      />
+
+      {/* Global Paynow Modal for Profile / Maid Boosts */}
+      <PaynowModal
+        isOpen={isGlobalPaynowOpen}
+        onClose={() => setIsGlobalPaynowOpen(false)}
+        details={globalPaynowDetails}
+        onSuccess={async (receipt) => {
+          if (currentUser && globalPaynowDetails?.targetId === currentUser.uid) {
+            await featureUserProfile();
+          }
+          setIsGlobalPaynowOpen(false);
         }}
       />
 

@@ -106,7 +106,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenAccessibility,
   onOpenMarketingHub,
 }) => {
-  const { currentUser, setIsAuthModalOpen, setAuthModalTab, logout, switchDemoUser } = useAuth();
+  const { currentUser, setIsAuthModalOpen, setIsEditProfileModalOpen, setAuthModalTab, logout, switchDemoUser } = useAuth();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   return (
@@ -389,10 +389,32 @@ export const Header: React.FC<HeaderProps> = ({
                   <div className="p-2.5 bg-slate-800/90 rounded-xl space-y-1">
                     <p className="font-extrabold text-white text-xs">{currentUser.fullName}</p>
                     <p className="text-[10px] text-slate-400 truncate">{currentUser.email}</p>
-                    <p className="text-[10px] text-emerald-400 font-bold">
-                      Role: {currentUser.role} {currentUser.specificProfession ? `(${currentUser.specificProfession})` : ""}
-                    </p>
+                    <div className="flex items-center justify-between pt-0.5">
+                      <span className="text-[10px] text-emerald-400 font-bold">
+                        Role: {currentUser.role} {currentUser.specificProfession ? `(${currentUser.specificProfession})` : ""}
+                      </span>
+                      {currentUser.isFeatured && (
+                        <span className="px-1.5 py-0.5 bg-amber-400 text-slate-950 text-[9px] font-black rounded-md">
+                          ⭐ FEATURED
+                        </span>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Direct Edit Profile Trigger */}
+                  <button
+                    onClick={() => {
+                      setIsProfileMenuOpen(false);
+                      setIsEditProfileModalOpen(true);
+                    }}
+                    className="w-full text-left px-2.5 py-2 bg-gradient-to-r from-emerald-600/30 to-teal-600/30 hover:from-emerald-600/40 hover:to-teal-600/40 border border-emerald-500/40 rounded-xl text-xs font-black text-emerald-200 flex items-center justify-between transition-colors shadow-2xs"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5 text-emerald-400" />
+                      <span>Edit My Profile & National ID</span>
+                    </span>
+                    <span className="text-[9px] bg-emerald-500/30 px-1.5 py-0.5 rounded text-emerald-300 font-bold">Edit</span>
+                  </button>
 
                   <div className="space-y-1 pt-1">
                     {onOpenReferralProgram && (

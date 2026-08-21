@@ -1051,10 +1051,10 @@ export const INITIAL_PLATFORM_PRICING: PlatformPricingSettings = {
   featuredJobFeeUSD: 10,
   premiumMaidAccessFeeUSD: 5,
   employerSubscriptionUSD: 25,
-  featuredMaidProfileFeeUSD: 5,
+  featuredMaidProfileFeeUSD: 3,
   urgentPlacementFeeUSD: 15,
   workerJobAccessFeeUSD: 1,
-  updatedAt: "2026-08-15",
+  updatedAt: "2026-08-21",
 };
 
 export const INITIAL_NOTIFICATIONS: PlatformNotificationItem[] = [

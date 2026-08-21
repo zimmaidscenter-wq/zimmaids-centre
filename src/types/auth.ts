@@ -9,11 +9,26 @@ export interface UserSession {
   id: string;
   email: string;
   fullName: string;
+  firstName?: string;
+  surname?: string;
   role: AuthAccountType;
   specificProfession?: UserRole; // e.g. "Maid", "Nanny", "Caregiver" if worker
   city: CityLocation;
+  suburb?: string;
   phoneNumber?: string;
+  whatsappNumber?: string;
   avatarUrl?: string;
+  qualifications?: string[];
+  nationalIdNumber?: string;
+  nationalIdDocUrl?: string;
+  nationalIdFileName?: string;
+  bio?: string;
+  hourlyRateUSD?: number;
+  monthlyRateUSD?: number;
+  experienceYears?: number;
+  skills?: string[];
+  isFeatured?: boolean;
+  featuredExpiresAt?: string;
   authProvider: "email" | "google" | "facebook";
   approvalStatus: ApprovalStatus;
   joinedDate: string;
@@ -28,9 +43,11 @@ export interface AuthContextType {
   currentUser: UserSession | null;
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
+  isEditProfileModalOpen: boolean;
+  setIsEditProfileModalOpen: (open: boolean) => void;
   authModalTab: "signin" | "signup" | "demo" | "agency-signup";
   setAuthModalTab: (tab: "signin" | "signup" | "demo" | "agency-signup") => void;
-  loginWithEmail: (email: string, pass: string) => boolean;
+  loginWithEmail: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   signupWithEmail: (data: {
     fullName: string;
     email: string;
@@ -40,10 +57,12 @@ export interface AuthContextType {
     phoneNumber: string;
     specificProfession?: UserRole;
     agencyName?: string;
-  }) => void;
-  loginWithSocial: (provider: "google" | "facebook", accountType?: AuthAccountType) => void;
+  }) => Promise<{ success: boolean; error?: string }>;
+  loginWithSocial: (provider: "google" | "facebook", accountType?: AuthAccountType) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   switchDemoUser: (role: AuthAccountType) => void;
+  updateUserProfile: (updates: Partial<UserSession>) => Promise<{ success: boolean; error?: string }>;
+  featureUserProfile: (feeUSD?: number) => Promise<{ success: boolean; error?: string }>;
   
   // Agency Ecosystem State & Handlers
   agencies: AgencyProfile[];

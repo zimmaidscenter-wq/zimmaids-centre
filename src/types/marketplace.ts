@@ -141,6 +141,13 @@ export interface WorkerProfile {
   isAgencyManaged?: boolean;
   isAgencyVerified?: boolean;
   status?: "Active" | "Archived" | "Draft" | "Pending Review";
+  isFeatured?: boolean;
+  featuredExpiresAt?: string;
+  qualifications?: string[];
+  nationalIdNumber?: string;
+  nationalIdDocUrl?: string;
+  firstName?: string;
+  surname?: string;
   audioBioUrl?: string;
   // Candidate Appearance 3-Photo Set (Profile, Full Length, Work Action)
   candidatePhotos?: {
