@@ -68,18 +68,25 @@ function AppContent() {
   const [isAccessibilityModalOpen, setIsAccessibilityModalOpen] = useState<boolean>(false);
   const [isMarketingHubOpen, setIsMarketingHubOpen] = useState<boolean>(false);
 
-  // Role-based view sync: When user role is Worker -> show Jobs / Maid; when Employer -> show Marketplace / Employer
+  // Role-based view sync: When user role is Worker -> restrict marketplace & employer views and keep them on Maid Dashboard / Jobs
   React.useEffect(() => {
     if (currentUser?.role === "Worker") {
-      if (activeTab === "employer") {
-        setActiveTab("jobs");
+      if (
+        activeTab === "employer" ||
+        activeTab === "marketplace" ||
+        activeTab === "agency" ||
+        activeTab === "whatsapp-upload" ||
+        activeTab === "architecture" ||
+        activeTab === "payments"
+      ) {
+        setActiveTab("maid");
       }
     } else if (currentUser?.role === "Employer") {
       if (activeTab === "maid" || activeTab === "worker") {
         setActiveTab("marketplace");
       }
     }
-  }, [currentUser?.role]);
+  }, [currentUser?.role, activeTab]);
 
   const handleOpenLegal = (tab?: "privacy" | "terms" | "placement" | "guidelines" | "cookies" | "deletion") => {
     if (tab) setLegalInitialTab(tab);

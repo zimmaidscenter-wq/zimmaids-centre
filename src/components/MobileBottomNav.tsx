@@ -79,6 +79,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   currency,
   setCurrency,
 }) => {
+  const { currentUser } = useAuth();
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const handleTabClick = (tab: MobileBottomNavProps["activeTab"]) => {
@@ -180,12 +181,12 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
             {/* All Sections Links */}
             <div className="space-y-2 pt-2 border-t border-emerald-800/80">
               <span className="text-[11px] font-extrabold text-emerald-400 uppercase tracking-wider block mb-2">
-                All App Modules
+                {currentUser?.role === "Worker" ? "Worker Navigation" : "All App Modules"}
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button
                   onClick={() => handleTabClick("landing")}
-                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all ${
+                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all cursor-pointer ${
                     activeTab === "landing"
                       ? "bg-amber-400 text-slate-950 shadow-lg"
                       : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
@@ -195,33 +196,51 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                   <span>Brand Showcase</span>
                 </button>
 
-                <button
-                  onClick={() => handleTabClick("marketplace")}
-                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all ${
-                    activeTab === "marketplace"
-                      ? "bg-emerald-500 text-slate-950 shadow-lg"
-                      : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
-                  }`}
-                >
-                  <Building2 className="w-4 h-4 text-emerald-400" />
-                  <span>Service Directory</span>
-                </button>
+                {/* Worker Specific Direct Dashboard Link */}
+                {currentUser?.role === "Worker" && (
+                  <button
+                    onClick={() => handleTabClick("maid")}
+                    className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all cursor-pointer ${
+                      activeTab === "maid" || activeTab === "worker"
+                        ? "bg-amber-400 text-slate-950 shadow-lg font-black"
+                        : "bg-emerald-900/40 text-amber-300 hover:bg-emerald-900"
+                    }`}
+                  >
+                    <UserCheck className="w-4 h-4 text-amber-400" />
+                    <span>My Worker Dashboard</span>
+                  </button>
+                )}
+
+                {/* Service Directory - Restricted from Workers */}
+                {currentUser?.role !== "Worker" && (
+                  <button
+                    onClick={() => handleTabClick("marketplace")}
+                    className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all cursor-pointer ${
+                      activeTab === "marketplace"
+                        ? "bg-emerald-500 text-slate-950 shadow-lg"
+                        : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
+                    }`}
+                  >
+                    <Building2 className="w-4 h-4 text-emerald-400" />
+                    <span>Service Directory</span>
+                  </button>
+                )}
 
                 <button
                   onClick={() => handleTabClick("jobs")}
-                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all ${
+                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all cursor-pointer ${
                     activeTab === "jobs"
                       ? "bg-emerald-500 text-slate-950 shadow-lg"
                       : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
                   }`}
                 >
                   <Briefcase className="w-4 h-4 text-amber-300" />
-                  <span>Job Hub</span>
+                  <span>{currentUser?.role === "Worker" ? "Find Jobs & Vacancies" : "Job Hub"}</span>
                 </button>
 
                 <button
                   onClick={() => handleTabClick("whatsapp")}
-                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all ${
+                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all cursor-pointer ${
                     activeTab === "whatsapp"
                       ? "bg-[#25D366] text-slate-950 shadow-lg"
                       : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
@@ -231,69 +250,62 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                   <span>WhatsApp Messaging</span>
                 </button>
 
-                <button
-                  onClick={() => handleTabClick("whatsapp-upload")}
-                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all ${
-                    activeTab === "whatsapp-upload"
-                      ? "bg-amber-400 text-slate-950 shadow-lg"
-                      : "bg-emerald-900/40 text-amber-200 hover:bg-emerald-900"
-                  }`}
-                >
-                  <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span>WhatsApp Ingestion Portal</span>
-                </button>
+                {/* Non-Worker Modules */}
+                {currentUser?.role !== "Worker" && (
+                  <>
+                    <button
+                      onClick={() => handleTabClick("whatsapp-upload")}
+                      className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all cursor-pointer ${
+                        activeTab === "whatsapp-upload"
+                          ? "bg-amber-400 text-slate-950 shadow-lg"
+                          : "bg-emerald-900/40 text-amber-200 hover:bg-emerald-900"
+                      }`}
+                    >
+                      <Sparkles className="w-4 h-4 text-amber-400" />
+                      <span>WhatsApp Ingestion Portal</span>
+                    </button>
 
-                <button
-                  onClick={() => handleTabClick("worker")}
-                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all ${
-                    activeTab === "worker"
-                      ? "bg-emerald-500 text-slate-950 shadow-lg"
-                      : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
-                  }`}
-                >
-                  <UserCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Worker Portal</span>
-                </button>
+                    <button
+                      onClick={() => handleTabClick("search")}
+                      className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all cursor-pointer ${
+                        activeTab === "search"
+                          ? "bg-emerald-500 text-slate-950 shadow-lg"
+                          : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
+                      }`}
+                    >
+                      <Search className="w-4 h-4 text-emerald-300" />
+                      <span>Search Engine</span>
+                    </button>
 
-                <button
-                  onClick={() => handleTabClick("search")}
-                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all ${
-                    activeTab === "search"
-                      ? "bg-emerald-500 text-slate-950 shadow-lg"
-                      : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
-                  }`}
-                >
-                  <Search className="w-4 h-4 text-emerald-300" />
-                  <span>Search Engine</span>
-                </button>
+                    <button
+                      onClick={() => handleTabClick("ai-studio")}
+                      className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all cursor-pointer ${
+                        activeTab === "ai-studio"
+                          ? "bg-emerald-500 text-slate-950 shadow-lg"
+                          : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
+                      }`}
+                    >
+                      <Sparkles className="w-4 h-4 text-amber-300" />
+                      <span>AI Vetting Studio</span>
+                    </button>
 
-                <button
-                  onClick={() => handleTabClick("ai-studio")}
-                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all ${
-                    activeTab === "ai-studio"
-                      ? "bg-emerald-500 text-slate-950 shadow-lg"
-                      : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
-                  }`}
-                >
-                  <Sparkles className="w-4 h-4 text-amber-300" />
-                  <span>AI Vetting Studio</span>
-                </button>
-
-                <button
-                  onClick={() => handleTabClick("payments")}
-                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all ${
-                    activeTab === "payments"
-                      ? "bg-emerald-500 text-slate-950 shadow-lg"
-                      : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
-                  }`}
-                >
-                  <CreditCard className="w-4 h-4 text-emerald-400" />
-                  <span>Escrow Ledger</span>
-                </button>
+                    <button
+                      onClick={() => handleTabClick("payments")}
+                      className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all cursor-pointer ${
+                        activeTab === "payments"
+                          ? "bg-emerald-500 text-slate-950 shadow-lg"
+                          : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
+                      }`}
+                    >
+                      <CreditCard className="w-4 h-4 text-emerald-400" />
+                      <span>Escrow Ledger</span>
+                    </button>
+                  </>
+                )}
 
                 <button
                   onClick={() => handleTabClick("reviews")}
-                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all ${
+                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all cursor-pointer ${
                     activeTab === "reviews"
                       ? "bg-emerald-500 text-slate-950 shadow-lg"
                       : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
@@ -303,41 +315,45 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
                   <span>Reviews & Trust</span>
                 </button>
 
-                <button
-                  onClick={() => handleTabClick("reports")}
-                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all ${
-                    activeTab === "reports"
-                      ? "bg-emerald-500 text-slate-950 shadow-lg"
-                      : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
-                  }`}
-                >
-                  <TrendingUp className="w-4 h-4 text-amber-300" />
-                  <span>Performance Reports</span>
-                </button>
+                {currentUser?.role === "Admin" && (
+                  <>
+                    <button
+                      onClick={() => handleTabClick("reports")}
+                      className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all cursor-pointer ${
+                        activeTab === "reports"
+                          ? "bg-emerald-500 text-slate-950 shadow-lg"
+                          : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
+                      }`}
+                    >
+                      <TrendingUp className="w-4 h-4 text-amber-300" />
+                      <span>Performance Reports</span>
+                    </button>
 
-                <button
-                  onClick={() => handleTabClick("architecture")}
-                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all ${
-                    activeTab === "architecture"
-                      ? "bg-emerald-500 text-slate-950 shadow-lg"
-                      : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
-                  }`}
-                >
-                  <Cpu className="w-4 h-4 text-emerald-400" />
-                  <span>Architecture Specification</span>
-                </button>
+                    <button
+                      onClick={() => handleTabClick("architecture")}
+                      className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all cursor-pointer ${
+                        activeTab === "architecture"
+                          ? "bg-emerald-500 text-slate-950 shadow-lg"
+                          : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
+                      }`}
+                    >
+                      <Cpu className="w-4 h-4 text-emerald-400" />
+                      <span>Architecture Specification</span>
+                    </button>
 
-                <button
-                  onClick={() => handleTabClick("admin")}
-                  className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all ${
-                    activeTab === "admin"
-                      ? "bg-emerald-500 text-slate-950 shadow-lg"
-                      : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
-                  }`}
-                >
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Admin Center</span>
-                </button>
+                    <button
+                      onClick={() => handleTabClick("admin")}
+                      className={`p-3 rounded-2xl text-left text-xs font-bold flex items-center space-x-3 transition-all cursor-pointer ${
+                        activeTab === "admin"
+                          ? "bg-emerald-500 text-slate-950 shadow-lg"
+                          : "bg-emerald-900/40 text-emerald-100 hover:bg-emerald-900"
+                      }`}
+                    >
+                      <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                      <span>Admin Center</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -359,7 +375,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
       <div className="fixed bottom-0 inset-x-0 bg-emerald-950/95 backdrop-blur-lg border-t border-emerald-800/80 z-40 xl:hidden px-2 py-2 flex items-center justify-around shadow-2xl">
         <button
           onClick={() => setActiveTab("landing")}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all ${
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
             activeTab === "landing" ? "text-amber-400 font-extrabold" : "text-emerald-200/80 hover:text-white"
           }`}
         >
@@ -367,29 +383,42 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
           <span className="text-[10px] tracking-tight">Showcase</span>
         </button>
 
-        <button
-          onClick={() => setActiveTab("marketplace")}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all ${
-            activeTab === "marketplace" ? "text-emerald-400 font-extrabold" : "text-emerald-200/80 hover:text-white"
-          }`}
-        >
-          <Building2 className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] tracking-tight">Directory</span>
-        </button>
+        {/* For Workers: Show My Dashboard instead of Directory */}
+        {currentUser?.role === "Worker" ? (
+          <button
+            onClick={() => setActiveTab("maid")}
+            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+              activeTab === "maid" || activeTab === "worker" ? "text-amber-400 font-extrabold" : "text-emerald-200/80 hover:text-white"
+            }`}
+          >
+            <UserCheck className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] tracking-tight">Dashboard</span>
+          </button>
+        ) : (
+          <button
+            onClick={() => setActiveTab("marketplace")}
+            className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
+              activeTab === "marketplace" ? "text-emerald-400 font-extrabold" : "text-emerald-200/80 hover:text-white"
+            }`}
+          >
+            <Building2 className="w-5 h-5 mb-0.5" />
+            <span className="text-[10px] tracking-tight">Directory</span>
+          </button>
+        )}
 
         <button
           onClick={() => setActiveTab("jobs")}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all ${
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
             activeTab === "jobs" ? "text-emerald-400 font-extrabold" : "text-emerald-200/80 hover:text-white"
           }`}
         >
           <Briefcase className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] tracking-tight">Jobs</span>
+          <span className="text-[10px] tracking-tight">{currentUser?.role === "Worker" ? "My Jobs" : "Jobs"}</span>
         </button>
 
         <button
           onClick={() => setActiveTab("whatsapp")}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all ${
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
             activeTab === "whatsapp" ? "text-[#25D366] font-extrabold" : "text-emerald-200/80 hover:text-white"
           }`}
         >
@@ -399,7 +428,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
 
         <button
           onClick={() => setIsDrawerOpen(!isDrawerOpen)}
-          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all ${
+          className={`flex flex-col items-center justify-center py-1 px-2.5 rounded-xl transition-all cursor-pointer ${
             isDrawerOpen ? "text-amber-400 font-extrabold bg-emerald-900/60" : "text-emerald-200/80 hover:text-white"
           }`}
         >

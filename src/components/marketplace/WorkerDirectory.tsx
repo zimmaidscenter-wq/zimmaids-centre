@@ -45,15 +45,16 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
   onOpenPremiumModal,
   onNavigateToJobs,
 }) => {
-  const { setIsEditProfileModalOpen } = useAuth();
+  const { currentUser, setIsEditProfileModalOpen } = useAuth();
   const { publicCategories, allWorkers, initiateFeaturedPayment, confirmFeaturedPayment, updateWorkerProfile } = useCategories();
   const [activeCategory, setActiveCategory] = useState<string>("All");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [selectedWorker, setSelectedWorker] = useState<WorkerProfile | null>(null);
   const [cityFilter, setCityFilter] = useState<string>(selectedCity || "Harare");
   const [suburbFilter, setSuburbFilter] = useState<string>("All Suburbs");
-  const [verifiedOnlyFilter, setVerifiedOnlyFilter] = useState<boolean>(false);
+  const [verifiedOnlyFilter, setVerifiedOnlyFilter] = useState<boolean>(true); // Default to verified screened candidates
   const [featuredOnlyFilter, setFeaturedOnlyFilter] = useState<boolean>(false);
+  const [screeningFilter, setScreeningFilter] = useState<"all" | "police" | "references">("all");
   const [isHiringModalOpen, setIsHiringModalOpen] = useState<boolean>(false);
 
   // Paynow boosting state
@@ -113,14 +114,76 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
     }
   };
 
+  // If currentUser is a Worker, strictly restrict them from browsing other candidates
+  if (currentUser?.role === "Worker") {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-12">
+        <div className="bg-white rounded-3xl p-8 sm:p-10 border border-emerald-200 shadow-xl text-center space-y-6">
+          <div className="w-20 h-20 bg-emerald-100 text-emerald-800 rounded-full flex items-center justify-center mx-auto shadow-inner">
+            <ShieldCheck className="w-10 h-10 text-emerald-700" />
+          </div>
+          <div className="space-y-3 max-w-xl mx-auto">
+            <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-emerald-100 text-emerald-900 text-xs font-black rounded-full uppercase tracking-wider">
+              <Lock className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Worker Privacy & Screening Shield</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+              Candidate Directory is Restricted for Job Seekers
+            </h2>
+            <p className="text-sm text-slate-600 leading-relaxed">
+              To protect the privacy and personal contact details of all domestic workers and candidates, job seekers cannot browse other workers.
+              Please use your <strong>Worker Dashboard</strong> to complete your background screening (National ID & Police Clearance) or apply directly to verified employer vacancies.
+            </p>
+          </div>
+
+          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl max-w-lg mx-auto text-left space-y-2 text-xs text-emerald-950">
+            <div className="font-black text-emerald-900 flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              <span>Your Candidate Next Steps:</span>
+            </div>
+            <p>1. Keep your National ID and Police Clearance certificates uploaded.</p>
+            <p>2. Set your available locations and expected monthly salary.</p>
+            <p>3. Browse and apply to live jobs posted by families in Zimbabwe.</p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            {onNavigateToJobs && (
+              <button
+                onClick={onNavigateToJobs}
+                className="w-full sm:w-auto px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm rounded-2xl shadow-lg transition-all flex items-center justify-center space-x-2 cursor-pointer"
+              >
+                <Briefcase className="w-4 h-4" />
+                <span>Find Jobs & Vacancies</span>
+              </button>
+            )}
+            <button
+              onClick={() => setIsEditProfileModalOpen(true)}
+              className="w-full sm:w-auto px-6 py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-sm rounded-2xl shadow transition-all flex items-center justify-center space-x-2 cursor-pointer"
+            >
+              <UserCheck className="w-4 h-4" />
+              <span>Edit My Profile & Documents</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const filteredWorkers = allWorkers
     .filter((worker) => {
       // Exclude blacklisted/restricted candidates from public search
       if (worker.isRestricted) return false;
 
+      // Only show verified screened candidates when verifiedOnlyFilter is on
       const matchesVerified = !verifiedOnlyFilter || worker.isVerified;
       const matchesFeatured = !featuredOnlyFilter || worker.isFeatured;
       
+      // Screening sub-filter
+      const matchesScreening =
+        screeningFilter === "all" ||
+        (screeningFilter === "police" && (worker.isVerified || worker.policeClearanceDocUrl)) ||
+        (screeningFilter === "references" && (worker.verifications?.referenceVerified || worker.experienceYears >= 2));
+
       // Match category name flexibly against role
       const matchesCategory =
         activeCategory === "All" ||
@@ -135,7 +198,7 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
         worker.suburb.toLowerCase().includes(searchTerm.toLowerCase()) ||
         worker.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (worker.qualifications && worker.qualifications.some((q) => q.toLowerCase().includes(searchTerm.toLowerCase())));
-      return matchesCategory && matchesCity && matchesSuburb && matchesSearch && matchesVerified && matchesFeatured;
+      return matchesCategory && matchesCity && matchesSuburb && matchesSearch && matchesVerified && matchesFeatured && matchesScreening;
     })
     .sort((a, b) => {
       // Featured maids always rank at the top
@@ -266,60 +329,98 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
         )}
       </div>
 
-      {/* Category Pills Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <div className="flex items-center space-x-2">
-          <span className="px-3.5 py-1.5 bg-emerald-900 text-white rounded-xl text-xs font-black flex items-center space-x-1.5">
-            <Users className="w-4 h-4 text-emerald-300" />
-            <span>Verified Candidates ({filteredWorkers.length})</span>
-          </span>
+      {/* Category Pills & Screening Header */}
+      <div className="space-y-3 mb-6">
+        {/* Screening Standards Alert Bar */}
+        <div className="p-3 bg-emerald-900/90 text-white rounded-2xl flex flex-wrap items-center justify-between gap-3 text-xs shadow-md border border-emerald-700">
+          <div className="flex items-center space-x-2">
+            <ShieldCheck className="w-5 h-5 text-emerald-400 shrink-0" />
+            <span className="font-bold">
+              ZMC Candidate Screening Active: All candidates undergo National ID Verification, CID Zimbabwe Police Record Clearance, and Reference Checks.
+            </span>
+          </div>
+          <div className="flex items-center space-x-1.5">
+            <button
+              onClick={() => setScreeningFilter("all")}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                screeningFilter === "all" ? "bg-emerald-400 text-slate-950 font-black" : "bg-emerald-800 text-emerald-100 hover:bg-emerald-700"
+              }`}
+            >
+              All Screened ({filteredWorkers.length})
+            </button>
+            <button
+              onClick={() => setScreeningFilter("police")}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                screeningFilter === "police" ? "bg-emerald-400 text-slate-950 font-black" : "bg-emerald-800 text-emerald-100 hover:bg-emerald-700"
+              }`}
+            >
+              CID Police Cleared
+            </button>
+            <button
+              onClick={() => setScreeningFilter("references")}
+              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                screeningFilter === "references" ? "bg-emerald-400 text-slate-950 font-black" : "bg-emerald-800 text-emerald-100 hover:bg-emerald-700"
+              }`}
+            >
+              References Checked
+            </button>
+          </div>
         </div>
 
-        {/* Category Pills & Filters */}
-        <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 max-w-full">
-          <button
-            onClick={() => {
-              setActiveCategory("All");
-              setFeaturedOnlyFilter(false);
-            }}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-              activeCategory === "All" && !featuredOnlyFilter
-                ? "bg-emerald-800 text-white shadow"
-                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-            }`}
-          >
-            All Roles
-          </button>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-2">
+            <span className="px-3.5 py-1.5 bg-emerald-900 text-white rounded-xl text-xs font-black flex items-center space-x-1.5">
+              <Users className="w-4 h-4 text-emerald-300" />
+              <span>Verified Candidates ({filteredWorkers.length})</span>
+            </span>
+          </div>
 
-          {/* Featured Maid Special Filter Tab */}
-          <button
-            onClick={() => setFeaturedOnlyFilter(!featuredOnlyFilter)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all flex items-center space-x-1.5 ${
-              featuredOnlyFilter
-                ? "bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-400/80"
-                : "bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100"
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5 fill-current" />
-            <span>⭐ Featured Maids ($3 Boosted)</span>
-          </button>
-
-          {publicCategories.map((cat) => (
+          {/* Category Pills & Filters */}
+          <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 max-w-full">
             <button
-              key={cat.id}
               onClick={() => {
-                setActiveCategory(cat.name);
+                setActiveCategory("All");
                 setFeaturedOnlyFilter(false);
               }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                activeCategory === cat.name && !featuredOnlyFilter
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                activeCategory === "All" && !featuredOnlyFilter
                   ? "bg-emerald-800 text-white shadow"
                   : "bg-slate-100 text-slate-700 hover:bg-slate-200"
               }`}
             >
-              {cat.name}
+              All Roles
             </button>
-          ))}
+
+            {/* Featured Maid Special Filter Tab */}
+            <button
+              onClick={() => setFeaturedOnlyFilter(!featuredOnlyFilter)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all flex items-center space-x-1.5 cursor-pointer ${
+                featuredOnlyFilter
+                  ? "bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-400/80"
+                  : "bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 fill-current" />
+              <span>⭐ Featured Maids ($3 Boosted)</span>
+            </button>
+
+            {publicCategories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => {
+                  setActiveCategory(cat.name);
+                  setFeaturedOnlyFilter(false);
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  activeCategory === cat.name && !featuredOnlyFilter
+                    ? "bg-emerald-800 text-white shadow"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                }`}
+              >
+                {cat.name}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -397,7 +498,7 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
                 </div>
 
                 {/* Location & Availability */}
-                <div className="flex items-center justify-between text-xs text-slate-500 mb-3 pb-3 border-b border-slate-100">
+                <div className="flex items-center justify-between text-xs text-slate-500 mb-2.5 pb-2.5 border-b border-slate-100">
                   <span className="flex items-center space-x-1">
                     <MapPin className="w-3.5 h-3.5 text-emerald-600" />
                     <span>
@@ -407,6 +508,17 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
                   <span className="flex items-center space-x-1 text-emerald-600 font-semibold">
                     <Clock className="w-3 h-3" />
                     <span>{worker.availability}</span>
+                  </span>
+                </div>
+
+                {/* Candidate Screening & Vetting Status Banner */}
+                <div className="mb-3 px-2.5 py-1.5 bg-emerald-50/90 border border-emerald-200/80 rounded-xl flex items-center justify-between text-[10px] text-emerald-950">
+                  <div className="flex items-center space-x-1.5 font-bold">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    <span>CID Police Checked • ID Verified</span>
+                  </div>
+                  <span className="px-1.5 py-0.5 bg-emerald-200 text-emerald-900 font-extrabold rounded text-[9px]">
+                    ✓ Screened
                   </span>
                 </div>
 

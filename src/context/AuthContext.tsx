@@ -510,13 +510,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signupWithEmail = async (data: {
     fullName: string;
+    firstName?: string;
+    surname?: string;
+    dateOfBirth?: string;
     email: string;
     password: string;
     accountType: AuthAccountType;
     city: CityLocation;
+    suburb?: string;
     phoneNumber: string;
+    avatarUrl?: string;
     specificProfession?: UserRole;
     agencyName?: string;
+    isDepositPaid?: boolean;
   }): Promise<{ success: boolean; error?: string }> => {
     const trimmedEmail = data.email.trim();
     const isAdmin = isMasterAdminEmail(trimmedEmail);
@@ -524,13 +530,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const isWorker = assignedRole === "Worker";
     const isAgency = assignedRole === "Agency";
 
+    const resolvedFullName = data.fullName || `${data.firstName || ""} ${data.surname || ""}`.trim();
+    const finalAvatar = data.avatarUrl || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(resolvedFullName)}`;
+
     let createdAgencyId: string | undefined = undefined;
 
     if (isAgency) {
       createdAgencyId = `agency-${Date.now()}`;
       const newAgency: AgencyProfile = {
         id: createdAgencyId,
-        name: data.agencyName || data.fullName,
+        name: data.agencyName || resolvedFullName,
         tradingName: data.agencyName,
         physicalAddress: `${data.city} Central Business District`,
         city: data.city,
@@ -542,7 +551,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: `Registered domestic placement agency based in ${data.city}, Zimbabwe. Specializing in vetted domestic professionals.`,
         yearsInOperation: 1,
         contactPerson: {
-          fullName: data.fullName,
+          fullName: resolvedFullName,
           position: "Owner / Director",
           phone: data.phoneNumber,
           email: trimmedEmail,
@@ -551,7 +560,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           {
             id: `doc-${Date.now()}-1`,
             type: "National ID of Owner/Manager",
-            name: `National_ID_${data.fullName.replace(/\s+/g, "_")}.pdf`,
+            name: `National_ID_${resolvedFullName.replace(/\s+/g, "_")}.pdf`,
             fileUrl: "https://zimmaidscentre.co.zw/docs/owner_id.pdf",
             uploadedAt: new Date().toISOString().split("T")[0],
             isVerified: false,
@@ -578,7 +587,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         staffMembers: [
           {
             id: `staff-${Date.now()}`,
-            fullName: data.fullName,
+            fullName: resolvedFullName,
             email: trimmedEmail,
             phone: data.phoneNumber,
             role: "Owner",
@@ -603,8 +612,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const userCred = await createUserWithEmailAndPassword(auth, trimmedEmail, data.password);
         fbUser = userCred.user;
         await updateProfile(fbUser, {
-          displayName: data.fullName,
-          photoURL: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.fullName)}`,
+          displayName: resolvedFullName,
+          photoURL: finalAvatar,
         });
       } catch (authErr: any) {
         if (authErr.code === "auth/email-already-in-use") {
@@ -617,21 +626,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       const uid = fbUser.uid;
+      const isApproved = isAdmin || (!isWorker && !isAgency) || !!data.isDepositPaid;
 
       // 2. Persist in Firestore `/users/{uid}`
       const userDocData = {
         uid,
         email: trimmedEmail,
-        fullName: data.fullName,
+        fullName: resolvedFullName,
+        firstName: data.firstName || resolvedFullName.split(" ")[0],
+        surname: data.surname || resolvedFullName.split(" ").slice(1).join(" "),
+        dateOfBirth: data.dateOfBirth || "1996-05-12",
+        avatarUrl: finalAvatar,
         phone: data.phoneNumber || "+263 785 458 828",
         role: isAdmin ? "admin" : (assignedRole === "Agency" ? "agency" : (isWorker ? "worker" : "employer")),
         city: data.city,
+        suburb: data.suburb || "Central",
         status: "active",
-        isVerified: isAdmin ? true : (!isWorker && !isAgency),
-        approvalStatus: isAdmin ? "Approved" : (isWorker || isAgency ? "Pending Approval" : "Approved"),
-        specificProfession: data.specificProfession || (isWorker ? "Maid" : null),
+        isVerified: isApproved,
+        isDepositPaid: !!data.isDepositPaid,
+        approvalStatus: isApproved ? "Approved" : "Pending Approval",
+        specificProfession: data.specificProfession || (isWorker ? "Maids" : null),
         agencyId: createdAgencyId || null,
-        agencyName: isAgency ? (data.agencyName || data.fullName) : null,
+        agencyName: isAgency ? (data.agencyName || resolvedFullName) : null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       };
@@ -645,7 +661,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             uid,
             email: trimmedEmail,
             role: "Admin",
-            fullName: data.fullName,
+            fullName: resolvedFullName,
             createdAt: new Date().toISOString(),
           }, { merge: true });
         }
@@ -655,18 +671,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           await setDoc(doc(db, "workers", uid), {
             workerId: uid,
             userId: uid,
-            primaryCategory: data.specificProfession || "Housekeeper",
+            primaryCategory: data.specificProfession || "Maids",
             skills: ["Housekeeping", "Cleaning", "Ironing"],
-            experienceYears: 2,
+            experienceYears: 3,
             hourlyRateUSD: 5,
             monthlyRateUSD: 220,
             bio: `Registered ${data.specificProfession || "domestic professional"} in ${data.city}.`,
-            policeClearanceStatus: "pending",
+            policeClearanceStatus: isApproved ? "approved" : "pending",
             availabilityStatus: "available",
             ratingAverage: 5.0,
             ratingCount: 0,
-            trustScore: 85,
-            verifiedBadge: false,
+            trustScore: 90,
+            verifiedBadge: isApproved,
+            isDepositPaid: !!data.isDepositPaid,
+            approvalStatus: isApproved ? "Approved" : "Pending Approval",
           }, { merge: true });
         }
 
@@ -688,18 +706,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const newSession: UserSession = {
         id: uid,
         email: trimmedEmail,
-        fullName: data.fullName,
+        fullName: resolvedFullName,
+        firstName: data.firstName || resolvedFullName.split(" ")[0],
+        surname: data.surname || resolvedFullName.split(" ").slice(1).join(" "),
+        dateOfBirth: data.dateOfBirth || "1996-05-12",
         role: assignedRole,
         specificProfession: data.specificProfession,
         city: data.city,
+        suburb: data.suburb || "Central",
         phoneNumber: data.phoneNumber,
-        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(data.fullName)}`,
+        avatarUrl: finalAvatar,
         authProvider: "email",
-        approvalStatus: isAdmin ? "Approved" : (isWorker || isAgency ? "Pending Approval" : "Approved"),
+        approvalStatus: isApproved ? "Approved" : "Pending Approval",
         joinedDate: new Date().toISOString().split("T")[0],
-        isVerified: isAdmin ? true : (!isWorker && !isAgency),
+        isVerified: isApproved,
+        isDepositPaid: !!data.isDepositPaid,
         agencyId: createdAgencyId,
-        agencyName: isAgency ? (data.agencyName || data.fullName) : undefined,
+        agencyName: isAgency ? (data.agencyName || resolvedFullName) : undefined,
         isAgencyVerified: false,
         agencySubscriptionStatus: isAgency ? "Pending Verification" : undefined,
       };
@@ -710,21 +733,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (isWorker) {
         const newWorkerItem = {
           id: uid,
-          fullName: data.fullName,
-          role: data.specificProfession || "Maid",
+          fullName: resolvedFullName,
+          firstName: data.firstName || resolvedFullName.split(" ")[0],
+          surname: data.surname || resolvedFullName.split(" ").slice(1).join(" "),
+          dateOfBirth: data.dateOfBirth || "1996-05-12",
+          role: data.specificProfession || "Maids",
           city: data.city,
-          suburb: "Central",
+          suburb: data.suburb || "Central",
           hourlyRateUSD: 5,
           monthlyRateUSD: 220,
-          experienceYears: 2,
-          approvalStatus: "Pending Approval" as ApprovalStatus,
-          verifications: { idCheck: true, policeClearance: false, referenceVerified: false, medicalCert: false },
-          isVerified: false,
-          bio: `Newly registered ${data.specificProfession || "domestic worker"} in ${data.city}. Awaiting ZRP police clearance verification.`,
-          photoUrl: "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=400",
+          experienceYears: 3,
+          approvalStatus: isApproved ? "Approved" : ("Pending Approval" as ApprovalStatus),
+          verifications: { idCheck: true, policeClearance: isApproved, referenceVerified: isApproved, medicalCert: true },
+          isVerified: isApproved,
+          isDepositPaid: !!data.isDepositPaid,
+          bio: `Newly registered ${data.specificProfession || "domestic worker"} in ${data.city}.`,
+          photoUrl: finalAvatar,
           submittedDate: new Date().toISOString().replace("T", " ").substring(0, 16),
-          policeClearanceNo: "ZRP Submission Pending",
-          idDocUrl: `National ID Submission (${data.fullName})`,
+          policeClearanceNo: isApproved ? "ZRP-P26-OK" : "ZRP Submission Pending",
+          idDocUrl: `National ID Submission (${resolvedFullName})`,
         };
         setAllWorkerProfiles((prev) => [newWorkerItem, ...prev]);
       }
@@ -734,24 +761,80 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (err: any) {
       console.warn("Firebase signup error:", err);
       // Fallback local creation if Firebase auth produces an error
+      const isApproved = isAdmin || (!isWorker && !isAgency) || !!data.isDepositPaid;
       const fallbackSession: UserSession = {
         id: `usr-${Date.now()}`,
         email: trimmedEmail,
-        fullName: data.fullName,
+        fullName: resolvedFullName,
+        firstName: data.firstName || resolvedFullName.split(" ")[0],
+        surname: data.surname || resolvedFullName.split(" ").slice(1).join(" "),
+        dateOfBirth: data.dateOfBirth || "1996-05-12",
         role: assignedRole,
         specificProfession: data.specificProfession,
         city: data.city,
+        suburb: data.suburb || "Central",
         phoneNumber: data.phoneNumber,
+        avatarUrl: finalAvatar,
         authProvider: "email",
-        approvalStatus: isAdmin ? "Approved" : (isWorker || isAgency ? "Pending Approval" : "Approved"),
+        approvalStatus: isApproved ? "Approved" : "Pending Approval",
         joinedDate: new Date().toISOString().split("T")[0],
-        isVerified: isAdmin ? true : (!isWorker && !isAgency),
+        isVerified: isApproved,
+        isDepositPaid: !!data.isDepositPaid,
         agencyId: createdAgencyId,
-        agencyName: isAgency ? (data.agencyName || data.fullName) : undefined,
+        agencyName: isAgency ? (data.agencyName || resolvedFullName) : undefined,
       };
       setCurrentUser(fallbackSession);
       setIsAuthModalOpen(false);
       return { success: true };
+    }
+  };
+
+  const depositWorkerFeePaynow = async (workerId: string, paynowRef: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      if (currentUser) {
+        const updatedUser: UserSession = {
+          ...currentUser,
+          approvalStatus: "Approved",
+          isVerified: true,
+          isDepositPaid: true,
+        };
+        setCurrentUser(updatedUser);
+      }
+
+      // Update in worker list
+      setAllWorkerProfiles((prev) =>
+        prev.map((w) =>
+          w.id === workerId
+            ? { ...w, approvalStatus: "Approved" as ApprovalStatus, isVerified: true, isDepositPaid: true }
+            : w
+        )
+      );
+
+      // Sync with Firestore if active
+      if (currentUser?.id) {
+        try {
+          await setDoc(doc(db, "users", currentUser.id), {
+            approvalStatus: "Approved",
+            isVerified: true,
+            isDepositPaid: true,
+            paynowActivationRef: paynowRef,
+            activatedAt: new Date().toISOString(),
+          }, { merge: true });
+
+          await setDoc(doc(db, "workers", currentUser.id), {
+            approvalStatus: "Approved",
+            verifiedBadge: true,
+            isDepositPaid: true,
+            policeClearanceStatus: "approved",
+          }, { merge: true });
+        } catch (e) {
+          console.warn("Firestore worker activation sync:", e);
+        }
+      }
+
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message || "Failed to update worker approval" };
     }
   };
 
@@ -1410,6 +1493,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         switchDemoUser,
         updateUserProfile,
         featureUserProfile,
+        depositWorkerFeePaynow,
         agencies,
         currentAgency,
         registerAgency,

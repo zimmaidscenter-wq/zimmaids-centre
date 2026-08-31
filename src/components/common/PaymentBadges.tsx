@@ -146,29 +146,26 @@ export const PaymentBadge: React.FC<{
 };
 
 /**
- * EcoCash Official Verification Badge with picture
+ * Paynow Official Verification Badge
  */
-export const EcoCashOfficialBadge: React.FC<{
+export const PaynowOfficialBadge: React.FC<{
   className?: string;
   variant?: "dark" | "light" | "colored";
 }> = ({ className = "", variant = "dark" }) => {
   if (variant === "light") {
     return (
       <div
-        className={`inline-flex items-center space-x-2 bg-blue-50 border border-blue-200 text-blue-950 px-3 py-1.5 rounded-xl shadow-xs ${className}`}
+        className={`inline-flex items-center space-x-2 bg-emerald-50 border border-emerald-200 text-emerald-950 px-3 py-1.5 rounded-xl shadow-xs ${className}`}
       >
-        <img
-          src={ecocashImg}
-          alt="EcoCash Official"
-          referrerPolicy="no-referrer"
-          className="w-6 h-6 rounded-md object-cover border border-blue-300 shadow-xs shrink-0"
-        />
+        <div className="w-6 h-6 rounded-md bg-emerald-700 text-white font-black text-[9px] flex items-center justify-center shrink-0 shadow-xs">
+          PN
+        </div>
         <div className="text-left">
-          <div className="text-xs font-extrabold text-blue-900 flex items-center gap-1">
-            EcoCash Verified
+          <div className="text-xs font-extrabold text-emerald-900 flex items-center gap-1">
+            Paynow Zimbabwe Gateway
           </div>
-          <div className="text-[10px] text-blue-700 font-medium">
-            USD & ZWG Mobile Money
+          <div className="text-[10px] text-emerald-700 font-medium">
+            256-Bit SSL Redirect
           </div>
         </div>
       </div>
@@ -177,25 +174,23 @@ export const EcoCashOfficialBadge: React.FC<{
 
   return (
     <div
-      className={`inline-flex items-center space-x-2.5 bg-gradient-to-r from-blue-950 to-slate-900 border border-blue-500/60 text-white px-3 py-1.5 rounded-xl shadow-md ${className}`}
+      className={`inline-flex items-center space-x-2.5 bg-gradient-to-r from-emerald-950 to-slate-900 border border-emerald-500/60 text-white px-3 py-1.5 rounded-xl shadow-md ${className}`}
     >
-      <img
-        src={ecocashImg}
-        alt="EcoCash Official"
-        referrerPolicy="no-referrer"
-        className="w-7 h-7 rounded-lg object-cover border border-blue-400/40 shadow-sm shrink-0"
-      />
+      <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white font-black text-[10px] flex items-center justify-center shrink-0 shadow-sm border border-emerald-400/40">
+        PN
+      </div>
       <div className="text-left">
         <div className="text-xs font-black text-white flex items-center gap-1">
-          <span>EcoCash Mobile</span>
-          <span className="bg-blue-500/30 text-blue-300 text-[9px] px-1.5 py-0.2 rounded font-bold uppercase">
+          <span>Paynow Zimbabwe</span>
+          <span className="bg-emerald-500/30 text-emerald-300 text-[9px] px-1.5 py-0.2 rounded font-bold uppercase">
             Official
           </span>
         </div>
-        <div className="text-[10px] text-blue-300 font-medium">
-          Paynow Automated Gateway Settlement
+        <div className="text-[10px] text-emerald-300 font-medium">
+          Secure Gateway Redirect
         </div>
       </div>
     </div>
   );
 };
+

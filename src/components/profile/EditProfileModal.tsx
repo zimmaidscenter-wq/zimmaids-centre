@@ -4,6 +4,7 @@ import { usePlatform } from "../../context/PlatformContext";
 import { useCategories } from "../../context/CategoryContext";
 import { ALL_ZIMBABWE_CITIES, getSuburbsForCity } from "../../data/zimbabweLocations";
 import { CityLocation, UserRole } from "../../types/marketplace";
+import { ScrollableDateOfBirthPicker } from "../common/ScrollableDateOfBirthPicker";
 import {
   X,
   User,
@@ -60,6 +61,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
   // Form State
   const [firstName, setFirstName] = useState("");
   const [surname, setSurname] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
@@ -97,6 +99,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
 
       setFirstName(fName);
       setSurname(sName);
+      setDateOfBirth(currentUser.dateOfBirth || "1998-05-15");
       setEmail(currentUser.email || "");
       setPhone(currentUser.phoneNumber || "+263 785 458 828");
       setWhatsapp(currentUser.whatsappNumber || currentUser.phoneNumber || "+263 785 458 828");
@@ -197,6 +200,7 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
       firstName: firstName.trim(),
       surname: surname.trim(),
       fullName: fullCalculatedName,
+      dateOfBirth,
       phoneNumber: phone.trim(),
       whatsappNumber: whatsapp.trim(),
       city,
@@ -318,6 +322,12 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
                   />
                 </div>
               </div>
+
+              {/* Scrollable Date of Birth Picker */}
+              <ScrollableDateOfBirthPicker
+                value={dateOfBirth}
+                onChange={setDateOfBirth}
+              />
 
               {/* Avatar Upload / Photo Preview */}
               <div className="pt-2 flex items-center space-x-3">

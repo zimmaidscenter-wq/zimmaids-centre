@@ -18,6 +18,7 @@ import {
   Upload,
   Phone,
   MessageSquare,
+  MessageCircle,
   Mail,
   Home,
   Plus,
@@ -68,7 +69,7 @@ export const MaidDashboard: React.FC = () => {
   } = usePlatform();
 
   const [activeTab, setActiveTab] = useState<
-    "profile" | "photos" | "documents" | "browse-jobs" | "my-applications" | "wallet"
+    "profile" | "photos" | "documents" | "screening" | "browse-jobs" | "my-applications" | "wallet"
   >("profile");
 
   // Profile Edit State
@@ -623,6 +624,18 @@ export const MaidDashboard: React.FC = () => {
         >
           <FileCheck className="w-4 h-4 text-emerald-600" />
           National ID & Certificates ({currentMaidProfile?.privateDocuments?.length || 0})
+        </button>
+
+        <button
+          onClick={() => setActiveTab("screening")}
+          className={`px-4 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 whitespace-nowrap ${
+            activeTab === "screening"
+              ? "bg-emerald-700 text-white shadow-md shadow-emerald-900/20"
+              : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+          Background Screening & CID Clearance
         </button>
 
         <button
@@ -1409,6 +1422,168 @@ export const MaidDashboard: React.FC = () => {
         </div>
       )}
 
+      {/* TAB: BACKGROUND SCREENING & CID CLEARANCE */}
+      {activeTab === "screening" && (
+        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-6">
+            <div className="space-y-1">
+              <div className="inline-flex items-center space-x-1.5 px-3 py-1 bg-emerald-100 text-emerald-900 text-xs font-black rounded-full uppercase">
+                <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Zimbabwe Candidate Screening Pipeline</span>
+              </div>
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">Background Vetting & Verification Status</h2>
+              <p className="text-xs text-slate-500">
+                Learn how your profile is screened, verified, and approved before employers can book placement interviews.
+              </p>
+            </div>
+
+            <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl flex items-center space-x-3">
+              <div className="p-2.5 bg-emerald-600 text-white rounded-xl">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-[10px] text-emerald-700 font-extrabold uppercase block">Overall Status</span>
+                <span className="text-xs font-black text-emerald-950">
+                  {currentMaidProfile?.verificationStatus === "Approved"
+                    ? "✓ 100% Screened & Approved"
+                    : "⏳ Vetting in Progress (Admin Review)"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* 4 Screening Pillars Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Pillar 1: National ID Verification */}
+            <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center">
+                    1
+                  </div>
+                  <h3 className="text-sm font-black text-slate-900">National ID Check</h3>
+                </div>
+                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-black text-[10px] rounded-full">
+                  ✓ Required
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Matches your full name, date of birth, and identity number ({nationalIdNumber}) against the official Zimbabwe Civil Registry.
+              </p>
+              <div className="pt-1 flex items-center justify-between text-xs text-slate-500">
+                <span>Status: <strong>Verified</strong></span>
+                <button
+                  onClick={() => setActiveTab("documents")}
+                  className="text-emerald-700 font-bold hover:underline"
+                >
+                  View ID Document →
+                </button>
+              </div>
+            </div>
+
+            {/* Pillar 2: CID Police Clearance */}
+            <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center">
+                    2
+                  </div>
+                  <h3 className="text-sm font-black text-slate-900">CID Police Record Clearance</h3>
+                </div>
+                <span className="px-2 py-0.5 bg-amber-100 text-amber-900 font-black text-[10px] rounded-full">
+                  High Priority
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Zimbabwe Republic Police (ZRP) Criminal Investigations Department clearance certificate verifying clean background.
+              </p>
+              <div className="pt-1 flex items-center justify-between text-xs text-slate-500">
+                <span>Certificate: <strong>Active</strong></span>
+                <button
+                  onClick={() => setActiveTab("documents")}
+                  className="text-emerald-700 font-bold hover:underline"
+                >
+                  Upload CID Clearance →
+                </button>
+              </div>
+            </div>
+
+            {/* Pillar 3: Former Employer References */}
+            <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center">
+                    3
+                  </div>
+                  <h3 className="text-sm font-black text-slate-900">Reference Checks</h3>
+                </div>
+                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-black text-[10px] rounded-full">
+                  ✓ Verified
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                ZMC team conducts direct phone verification with at least two prior household employers or references.
+              </p>
+              <div className="pt-1 flex items-center justify-between text-xs text-slate-500">
+                <span>References Checked: <strong>2/2 Confirmed</strong></span>
+                <button
+                  onClick={() => setActiveTab("profile")}
+                  className="text-emerald-700 font-bold hover:underline"
+                >
+                  Update References →
+                </button>
+              </div>
+            </div>
+
+            {/* Pillar 4: Medical & Skills Assessment */}
+            <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-800 font-black text-xs flex items-center justify-center">
+                    4
+                  </div>
+                  <h3 className="text-sm font-black text-slate-900">Health & Skill Assessment</h3>
+                </div>
+                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 font-black text-[10px] rounded-full">
+                  ✓ Checked
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 leading-relaxed">
+                Health screening, food handling certifications, first aid readiness, and verified years of domestic experience.
+              </p>
+              <div className="pt-1 flex items-center justify-between text-xs text-slate-500">
+                <span>Experience: <strong>{experienceYears} Years Verified</strong></span>
+                <button
+                  onClick={() => setActiveTab("photos")}
+                  className="text-emerald-700 font-bold hover:underline"
+                >
+                  View Skill Photos →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Direct CTA */}
+          <div className="p-5 bg-gradient-to-r from-slate-900 to-emerald-950 text-white rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div>
+              <h4 className="font-black text-sm">Need help obtaining your CID Police Clearance or Reference Letters?</h4>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Our support team assists domestic workers in Harare, Bulawayo, Mutare, and Gweru with document processing.
+              </p>
+            </div>
+            <a
+              href="https://wa.me/263785458828?text=Hello%20ZMC%20Team%2C%20I%20need%20assistance%20with%20Worker%20Screening%20and%20Police%20Clearance"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-5 py-2.5 bg-[#25D366] hover:bg-[#20ba59] text-slate-950 font-black text-xs rounded-xl shadow-md transition-all flex items-center space-x-2 shrink-0"
+            >
+              <MessageCircle className="w-4 h-4" />
+              <span>WhatsApp Support Team</span>
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* TAB 4: BROWSE EMPLOYER JOBS */}
       {activeTab === "browse-jobs" && (
         <div className="space-y-6">
@@ -1800,32 +1975,27 @@ export const MaidDashboard: React.FC = () => {
                   />
                 </div>
 
-                {/* Payment Methods */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-2">Payment Method</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {["EcoCash", "OneMoney", "Visa / MasterCard", "InnBucks"].map((m) => (
-                      <button
-                        key={m}
-                        type="button"
-                        onClick={() => setPaymentMethod(m)}
-                        className={`p-3 rounded-xl text-xs font-bold text-left transition-all border ${
-                          paymentMethod === m
-                            ? "border-emerald-500 bg-emerald-50 text-emerald-900"
-                            : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                        }`}
-                      >
-                        {m}
-                      </button>
-                    ))}
+                {/* Paynow Zimbabwe Gateway Banner */}
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-bold text-xs text-slate-900">
+                      <CreditCard className="w-4 h-4 text-emerald-600" />
+                      <span>Paynow Zimbabwe Gateway</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      Redirect & Instant Push
+                    </span>
                   </div>
+                  <p className="text-[11px] text-slate-500">
+                    Deposit funds securely using the official Paynow Zimbabwe payment gateway.
+                  </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleInitiatePaynow}
                   disabled={isProcessingPayment}
-                  className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <CreditCard className="w-4 h-4" />
                   {isProcessingPayment ? "Connecting to Paynow..." : `Pay $${depositAmount}.00 USD via Paynow`}

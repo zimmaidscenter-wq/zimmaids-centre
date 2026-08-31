@@ -1781,27 +1781,28 @@ export const EmployerDashboard: React.FC = () => {
                 </div>
 
                 {/* Payment Gateway */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1.5">Payment Method</label>
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 focus:bg-white focus:border-emerald-500 focus:outline-none font-semibold"
-                  >
-                    <option value="EcoCash">EcoCash USD Mobile Money</option>
-                    <option value="OneMoney">OneMoney USD Mobile Money</option>
-                    <option value="InnBucks">InnBucks Zimbabwe</option>
-                    <option value="Visa/MasterCard">Visa / MasterCard (International / Local USD)</option>
-                  </select>
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 font-bold text-xs text-slate-900">
+                      <CreditCard className="w-4 h-4 text-emerald-600" />
+                      <span>Paynow Zimbabwe Gateway</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
+                      Direct Clearing
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Official secure payment gateway for Zimbabwe Maids Centre.
+                  </p>
                 </div>
 
                 <button
                   type="button"
                   onClick={handleInitiateDeposit}
                   disabled={isProcessingPayment || depositAmount <= 0}
-                  className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {isProcessingPayment ? "Connecting to Paynow..." : `Proceed with Paynow ($${depositAmount}.00 USD)`}
+                  {isProcessingPayment ? "Connecting to Paynow..." : `Proceed to Paynow ($${depositAmount}.00 USD)`}
                 </button>
               </div>
             ) : (

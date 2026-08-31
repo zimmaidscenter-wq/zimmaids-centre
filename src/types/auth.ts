@@ -11,6 +11,7 @@ export interface UserSession {
   fullName: string;
   firstName?: string;
   surname?: string;
+  dateOfBirth?: string;
   role: AuthAccountType;
   specificProfession?: UserRole; // e.g. "Maid", "Nanny", "Caregiver" if worker
   city: CityLocation;
@@ -33,6 +34,8 @@ export interface UserSession {
   approvalStatus: ApprovalStatus;
   joinedDate: string;
   isVerified?: boolean;
+  isDepositPaid?: boolean;
+  walletBalanceUSD?: number;
   agencyId?: string;
   agencyName?: string;
   isAgencyVerified?: boolean;
@@ -50,19 +53,26 @@ export interface AuthContextType {
   loginWithEmail: (email: string, pass: string) => Promise<{ success: boolean; error?: string }>;
   signupWithEmail: (data: {
     fullName: string;
+    firstName?: string;
+    surname?: string;
+    dateOfBirth?: string;
     email: string;
     password: string;
     accountType: AuthAccountType;
     city: CityLocation;
+    suburb?: string;
     phoneNumber: string;
+    avatarUrl?: string;
     specificProfession?: UserRole;
     agencyName?: string;
+    isDepositPaid?: boolean;
   }) => Promise<{ success: boolean; error?: string }>;
   loginWithSocial: (provider: "google" | "facebook", accountType?: AuthAccountType) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   switchDemoUser: (role: AuthAccountType) => void;
   updateUserProfile: (updates: Partial<UserSession>) => Promise<{ success: boolean; error?: string }>;
   featureUserProfile: (feeUSD?: number) => Promise<{ success: boolean; error?: string }>;
+  depositWorkerFeePaynow: (workerId: string, paynowRef: string) => Promise<{ success: boolean; error?: string }>;
   
   // Agency Ecosystem State & Handlers
   agencies: AgencyProfile[];

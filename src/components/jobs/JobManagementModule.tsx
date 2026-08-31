@@ -174,7 +174,7 @@ const JOB_TEMPLATES = [
 ];
 
 export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ currency = "USD", onNavigateToMarketplace }) => {
-  const { recordHiringNotification } = usePlatform();
+  const { recordHiringNotification, submitCustomJobApplication } = usePlatform();
   const { currentUser } = useAuth();
   const { publicCategories, categories, allJobs } = useCategories();
   const [jobsList, setJobsList] = useState<JobPosting[]>(allJobs && allJobs.length > 0 ? allJobs : INITIAL_JOBS);
@@ -210,28 +210,36 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
     hasReferences: true,
   });
 
-  const handleApplyJob = (e: React.FormEvent) => {
+  const handleApplyJob = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!applyingJob) return;
     setIsSubmittingApp(true);
-    setTimeout(() => {
-      setIsSubmittingApp(false);
-      setJobsList((prev) =>
-        prev.map((j) => (j.id === applyingJob.id ? { ...j, applicantCount: j.applicantCount + 1 } : j))
-      );
-      const appliedTitle = applyingJob.title;
-      const workerName = applicantForm.fullName || currentUser?.fullName || "Domestic Worker";
-      recordHiringNotification(workerName, appliedTitle);
-      setApplyingJob(null);
-      showToast(`✅ Application submitted for "${appliedTitle}"! The employer will review your profile.`);
-    }, 800);
-  };
 
-  const handleWhatsAppApply = (job: JobPosting) => {
-    const text = encodeURIComponent(
-      `Hello! I saw your job vacancy on VerifiedMaids Zimbabwe for "${job.title}" (${job.roleNeeded}) in ${job.suburb}, ${job.city} offering $${job.offeredSalaryUSD} USD. I would like to apply. My name is: `
+    const appliedTitle = applyingJob.title;
+    const workerName = applicantForm.fullName || currentUser?.fullName || "Domestic Worker";
+
+    // Send application directly to Employer Dashboard
+    if (submitCustomJobApplication) {
+      await submitCustomJobApplication({
+        jobId: applyingJob.id,
+        maidName: workerName,
+        phone: applicantForm.phone,
+        whatsapp: applicantForm.phone,
+        experienceYears: `${applicantForm.experienceYears} Years`,
+        skills: applicantForm.skills,
+        coverNote: applicantForm.message,
+        hasPoliceClearance: applicantForm.hasPoliceClearance,
+        hasReferences: applicantForm.hasReferences,
+      });
+    }
+
+    setIsSubmittingApp(false);
+    setJobsList((prev) =>
+      prev.map((j) => (j.id === applyingJob.id ? { ...j, applicantCount: j.applicantCount + 1 } : j))
     );
-    window.open(`https://wa.me/263771234567?text=${text}`, "_blank");
+    recordHiringNotification(workerName, appliedTitle);
+    setApplyingJob(null);
+    showToast(`✅ Application submitted directly to employer dashboard for "${appliedTitle}"!`);
   };
 
   // Form State for Create / Edit

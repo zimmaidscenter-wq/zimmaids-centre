@@ -371,7 +371,7 @@ export interface PlacementFeeRecord {
   dueDate: string;
   proofOfPaymentUrl?: string;
   proofFileName?: string;
-  paymentMethod: "EcoCash" | "InnBucks" | "ZimSwitch" | "Visa/Mastercard" | "Mukuru" | "Cash";
+  paymentMethod: "Account Balance" | "Paynow" | "EcoCash" | "InnBucks" | "ZimSwitch" | "Visa/Mastercard" | "Mukuru" | "Cash";
   ecoCashNumberUsed?: string;
   notes?: string;
 }

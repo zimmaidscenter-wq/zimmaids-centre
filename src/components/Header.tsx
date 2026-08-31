@@ -19,11 +19,14 @@ import {
   LogIn,
   LogOut,
   ChevronDown,
+  ChevronRight,
   User,
   ShieldAlert,
   CheckCircle2,
   Gift,
   Bell,
+  Settings,
+  HelpCircle,
 } from "lucide-react";
 import { UserRole, CityLocation } from "../types/marketplace";
 import { ALL_ZIMBABWE_CITIES } from "../data/zimbabweLocations";
@@ -164,22 +167,32 @@ export const Header: React.FC<HeaderProps> = ({
             </select>
           </div>
 
-          {/* Persona Filter */}
-          <div className="hidden lg:flex items-center space-x-1 text-xs text-emerald-200 bg-emerald-900/40 px-2 py-0.5 rounded-lg border border-emerald-800/50">
-            <Users className="w-3 h-3 text-teal-400 shrink-0" />
-            <span className="text-[10px] text-emerald-400/80">Role:</span>
-            <select
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value as UserRole)}
-              className="bg-transparent text-teal-100 font-medium text-[11px] focus:outline-none cursor-pointer max-w-[130px] truncate"
-            >
-              {dynamicRoleOptions.map((role) => (
-                <option key={role} value={role} className="bg-slate-900 text-white">
-                  {role}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Persona Filter - Hide for Worker, keep for Employer/Admin/Guest */}
+          {currentUser?.role !== "Worker" ? (
+            <div className="hidden lg:flex items-center space-x-1 text-xs text-emerald-200 bg-emerald-900/40 px-2 py-0.5 rounded-lg border border-emerald-800/50">
+              <Users className="w-3 h-3 text-teal-400 shrink-0" />
+              <span className="text-[10px] text-emerald-400/80">Role:</span>
+              <select
+                value={selectedRole}
+                onChange={(e) => setSelectedRole(e.target.value as UserRole)}
+                className="bg-transparent text-teal-100 font-medium text-[11px] focus:outline-none cursor-pointer max-w-[130px] truncate"
+              >
+                {dynamicRoleOptions.map((role) => (
+                  <option key={role} value={role} className="bg-slate-900 text-white">
+                    {role}
+                  </option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            <div className="hidden lg:flex items-center space-x-1.5 text-xs text-emerald-200 bg-emerald-900/40 px-2.5 py-0.5 rounded-lg border border-emerald-700/50">
+              <UserCheck className="w-3 h-3 text-amber-400 shrink-0" />
+              <span className="text-[10px] text-emerald-300 font-bold">Category:</span>
+              <span className="text-[11px] font-bold text-amber-300 truncate max-w-[140px]">
+                {currentUser.specificProfession || currentUser.role}
+              </span>
+            </div>
+          )}
 
           {/* Currency Toggle */}
           <div className="flex items-center bg-emerald-950/90 rounded-lg p-0.5 border border-emerald-700/50">
@@ -230,7 +243,7 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Home */}
           <button
             onClick={() => setActiveTab("landing")}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "landing"
                 ? "bg-emerald-500 text-slate-950 shadow-md font-extrabold"
                 : "text-emerald-200 hover:bg-emerald-800/50 hover:text-white"
@@ -240,49 +253,68 @@ export const Header: React.FC<HeaderProps> = ({
             <span>Home</span>
           </button>
 
-          {/* Find Maids & Staff */}
-          <button
-            onClick={() => setActiveTab("marketplace")}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "marketplace"
-                ? "bg-emerald-500 text-slate-950 shadow-md font-extrabold"
-                : "text-emerald-200 hover:bg-emerald-800/50 hover:text-white"
-            }`}
-          >
-            <Users className="w-3.5 h-3.5" />
-            <span>Find Maids</span>
-          </button>
+          {/* Find Maids & Staff - ONLY for Non-Workers (Employers, Admins, Guests) */}
+          {currentUser?.role !== "Worker" && (
+            <button
+              onClick={() => setActiveTab("marketplace")}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === "marketplace"
+                  ? "bg-emerald-500 text-slate-950 shadow-md font-extrabold"
+                  : "text-emerald-200 hover:bg-emerald-800/50 hover:text-white"
+              }`}
+            >
+              <Users className="w-3.5 h-3.5" />
+              <span>Find Maids</span>
+            </button>
+          )}
 
-          {/* Browse Jobs */}
+          {/* Browse Jobs - For all users, especially Workers */}
           <button
             onClick={() => setActiveTab("jobs")}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "jobs"
                 ? "bg-emerald-500 text-slate-950 shadow-md font-extrabold"
                 : "text-emerald-200 hover:bg-emerald-800/50 hover:text-white"
             }`}
           >
             <Briefcase className="w-3.5 h-3.5" />
-            <span>Browse Jobs</span>
+            <span>{currentUser?.role === "Worker" ? "Find Jobs & Vacancies" : "Browse Jobs"}</span>
           </button>
 
-          {/* Agencies */}
-          <button
-            onClick={() => setActiveTab("agency")}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-              activeTab === "agency"
-                ? "bg-teal-400 text-slate-950 shadow-md font-extrabold"
-                : "text-teal-200 hover:bg-emerald-800/50 hover:text-white"
-            }`}
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            <span>Agencies</span>
-          </button>
+          {/* Agencies - ONLY for Non-Workers */}
+          {currentUser?.role !== "Worker" && (
+            <button
+              onClick={() => setActiveTab("agency")}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === "agency"
+                  ? "bg-teal-400 text-slate-950 shadow-md font-extrabold"
+                  : "text-teal-200 hover:bg-emerald-800/50 hover:text-white"
+              }`}
+            >
+              <Building2 className="w-3.5 h-3.5" />
+              <span>Agencies</span>
+            </button>
+          )}
+
+          {/* Worker Dashboard Tab - Dedicated for logged-in Worker */}
+          {currentUser?.role === "Worker" && (
+            <button
+              onClick={() => setActiveTab("maid" as any)}
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                activeTab === "maid" || activeTab === "worker"
+                  ? "bg-amber-400 text-slate-950 shadow-md font-black"
+                  : "text-amber-300 hover:bg-emerald-800/50 hover:text-white"
+              }`}
+            >
+              <UserCheck className="w-3.5 h-3.5" />
+              <span>My Worker Dashboard</span>
+            </button>
+          )}
 
           {/* Reviews & How it works */}
           <button
             onClick={() => setActiveTab("reviews")}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
               activeTab === "reviews"
                 ? "bg-emerald-500 text-slate-950 shadow-md font-extrabold"
                 : "text-emerald-200 hover:bg-emerald-800/50 hover:text-white"
@@ -292,11 +324,11 @@ export const Header: React.FC<HeaderProps> = ({
             <span>Reviews</span>
           </button>
 
-          {/* User-Specific Active Portal */}
+          {/* User-Specific Active Portal for Employer */}
           {currentUser?.role === "Employer" && (
             <button
               onClick={() => setActiveTab("employer" as any)}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === "employer"
                   ? "bg-amber-400 text-slate-950 shadow-md font-black"
                   : "text-amber-300 hover:bg-emerald-800/50 hover:text-white"
@@ -307,24 +339,11 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {currentUser?.role === "Worker" && (
-            <button
-              onClick={() => setActiveTab("maid" as any)}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
-                activeTab === "maid" || activeTab === "worker"
-                  ? "bg-amber-400 text-slate-950 shadow-md font-black"
-                  : "text-amber-300 hover:bg-emerald-800/50 hover:text-white"
-              }`}
-            >
-              <UserCheck className="w-3.5 h-3.5" />
-              <span>Maid Portal</span>
-            </button>
-          )}
-
+          {/* Admin Center - ONLY for Admin */}
           {currentUser?.role === "Admin" && (
             <button
               onClick={() => setActiveTab("admin")}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${
+              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
                 activeTab === "admin"
                   ? "bg-amber-400 text-slate-950 shadow-md font-black"
                   : "text-amber-200 hover:bg-emerald-800/50 hover:text-white"
@@ -364,146 +383,224 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {onOpenReferralProgram && (
-            <button
-              onClick={onOpenReferralProgram}
-              className="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs rounded-xl transition-all shadow-md active:scale-95 border border-amber-300"
-              title="Invite Friends & Earn $20 Placement Discount"
-            >
-              <Gift className="w-3.5 h-3.5 text-slate-950" />
-              <span className="hidden sm:inline">Invite & Earn $20</span>
-              <span className="sm:hidden">Earn $20</span>
-            </button>
-          )}
-
           {currentUser ? (
-            /* Logged-in User Profile Dropdown */
+            /* Logged-in User Profile Dropdown (Facebook Style) */
             <div className="relative">
               <button
                 onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                className="flex items-center space-x-2 px-3 py-1.5 bg-emerald-900/90 hover:bg-emerald-800 border border-emerald-600/50 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95"
+                className="flex items-center space-x-2 p-1 sm:px-2.5 sm:py-1.5 bg-emerald-900/90 hover:bg-emerald-800 border border-emerald-600/50 rounded-full sm:rounded-2xl text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
+                title="Account menu"
               >
-                <div className="w-6 h-6 rounded-full bg-emerald-400 text-slate-950 flex items-center justify-center font-black text-xs shadow-xs">
-                  {currentUser.fullName.charAt(0)}
+                <div className="w-7 h-7 rounded-full ring-2 ring-emerald-400 overflow-hidden bg-emerald-700 flex items-center justify-center font-black text-xs text-white shrink-0">
+                  {currentUser.avatarUrl ? (
+                    <img
+                      src={currentUser.avatarUrl}
+                      alt={currentUser.fullName}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <span>{currentUser.fullName.charAt(0)}</span>
+                  )}
                 </div>
                 <div className="text-left hidden sm:block">
-                  <div className="text-white text-xs font-bold leading-tight max-w-[110px] truncate">{currentUser.fullName}</div>
+                  <div className="text-white text-xs font-bold leading-tight max-w-[100px] truncate">{currentUser.fullName}</div>
                   <div className="text-[9px] text-emerald-300 font-semibold uppercase">{currentUser.role}</div>
                 </div>
-                <ChevronDown className="w-3.5 h-3.5 text-emerald-300 ml-0.5" />
+                <ChevronDown className={`w-3.5 h-3.5 text-emerald-300 ml-0.5 transition-transform duration-200 ${isProfileMenuOpen ? 'rotate-180' : ''}`} />
               </button>
 
               {isProfileMenuOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-slate-900 border border-slate-800 text-white rounded-2xl shadow-2xl p-3 z-50 space-y-2 animate-fadeIn text-xs">
-                  <div className="p-2.5 bg-slate-800/90 rounded-xl space-y-1">
-                    <p className="font-extrabold text-white text-xs">{currentUser.fullName}</p>
-                    <p className="text-[10px] text-slate-400 truncate">{currentUser.email}</p>
-                    <div className="flex items-center justify-between pt-0.5">
-                      <span className="text-[10px] text-emerald-400 font-bold">
-                        Role: {currentUser.role} {currentUser.specificProfession ? `(${currentUser.specificProfession})` : ""}
-                      </span>
-                      {currentUser.isFeatured && (
-                        <span className="px-1.5 py-0.5 bg-amber-400 text-slate-950 text-[9px] font-black rounded-md">
-                          ⭐ FEATURED
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Direct Edit Profile Trigger */}
-                  <button
+                <div className="absolute right-0 mt-2 w-80 sm:w-84 bg-slate-900/95 backdrop-blur-xl border border-slate-700/80 text-white rounded-2xl shadow-2xl p-2.5 z-50 space-y-1.5 animate-fadeIn text-xs">
+                  {/* Top Facebook Profile Card */}
+                  <div
                     onClick={() => {
                       setIsProfileMenuOpen(false);
                       setIsEditProfileModalOpen(true);
                     }}
-                    className="w-full text-left px-2.5 py-2 bg-gradient-to-r from-emerald-600/30 to-teal-600/30 hover:from-emerald-600/40 hover:to-teal-600/40 border border-emerald-500/40 rounded-xl text-xs font-black text-emerald-200 flex items-center justify-between transition-colors shadow-2xs"
+                    className="p-3 bg-slate-800/90 hover:bg-slate-800 rounded-xl border border-slate-700/60 transition-all flex items-center space-x-3 cursor-pointer group shadow-xs"
                   >
-                    <span className="flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Edit My Profile & National ID</span>
-                    </span>
-                    <span className="text-[9px] bg-emerald-500/30 px-1.5 py-0.5 rounded text-emerald-300 font-bold">Edit</span>
-                  </button>
+                    <div className="w-12 h-12 rounded-full ring-2 ring-emerald-500 overflow-hidden bg-slate-700 shrink-0">
+                      {currentUser.avatarUrl ? (
+                        <img
+                          src={currentUser.avatarUrl}
+                          alt={currentUser.fullName}
+                          referrerPolicy="no-referrer"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center font-black text-base text-white bg-gradient-to-br from-emerald-600 to-teal-700">
+                          {currentUser.fullName.charAt(0)}
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-extrabold text-sm text-white group-hover:text-emerald-300 transition-colors leading-tight truncate">
+                        {currentUser.fullName}
+                      </p>
+                      <p className="text-[11px] text-slate-400 truncate leading-tight mt-0.5">
+                        {currentUser.email}
+                      </p>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded border border-emerald-800/50">
+                          {currentUser.role}
+                        </span>
+                        {currentUser.specificProfession && (
+                          <span className="text-[10px] text-slate-400 truncate">
+                            {currentUser.specificProfession}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-white shrink-0 transition-transform group-hover:translate-x-0.5" />
+                  </div>
 
-                  <div className="space-y-1 pt-1">
-                    {onOpenReferralProgram && (
+                  <div className="h-px bg-slate-800/80 my-1"></div>
+
+                  {/* ONLY ADMIN SEES THE DASHBOARD LINK */}
+                  {currentUser.role === "Admin" && (
+                    <div className="space-y-1">
                       <button
                         onClick={() => {
                           setIsProfileMenuOpen(false);
-                          onOpenReferralProgram();
+                          setActiveTab("admin");
                         }}
-                        className="w-full text-left px-2.5 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 rounded-lg text-[11px] font-black text-amber-300 flex items-center justify-between transition-colors mb-1.5"
+                        className="w-full text-left p-2 hover:bg-slate-800 rounded-xl transition-colors flex items-center space-x-3 group cursor-pointer"
                       >
-                        <span className="flex items-center gap-1.5">
-                          <Gift className="w-3.5 h-3.5 text-amber-400" />
-                          <span>Refer Friends ($20 Credit)</span>
-                        </span>
-                        <Sparkles className="w-3 h-3 text-amber-300 fill-amber-300" />
+                        <div className="w-9 h-9 rounded-full bg-amber-500/20 text-amber-300 flex items-center justify-center shrink-0 group-hover:bg-amber-500/30 transition-colors">
+                          <ShieldCheck className="w-4 h-4 text-amber-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-xs text-white group-hover:text-amber-300">
+                              Admin Dashboard
+                            </span>
+                            <span className="text-[9px] bg-amber-400/20 text-amber-300 font-extrabold px-1.5 py-0.2 rounded">
+                              Superuser
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-400 truncate">
+                            Vetting, user approvals & Paynow audit
+                          </p>
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-slate-300 shrink-0" />
                       </button>
-                    )}
 
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-1">Switch Account Area</p>
+                      {/* Admin Quick Role Simulation Options */}
+                      <div className="p-2 bg-slate-950/60 rounded-xl border border-slate-800 space-y-1.5">
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block px-1">
+                          Admin Preview Modes
+                        </span>
+                        <div className="grid grid-cols-3 gap-1">
+                          <button
+                            onClick={() => {
+                              switchDemoUser("Employer");
+                              setIsProfileMenuOpen(false);
+                              setActiveTab("employer" as any);
+                            }}
+                            className="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-emerald-300 text-[10px] font-bold rounded-lg text-center truncate cursor-pointer transition-colors"
+                          >
+                            Employer View
+                          </button>
+                          <button
+                            onClick={() => {
+                              switchDemoUser("Worker");
+                              setIsProfileMenuOpen(false);
+                              setActiveTab("maid" as any);
+                            }}
+                            className="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-sky-300 text-[10px] font-bold rounded-lg text-center truncate cursor-pointer transition-colors"
+                          >
+                            Worker View
+                          </button>
+                          <button
+                            onClick={() => {
+                              switchDemoUser("Agency");
+                              setIsProfileMenuOpen(false);
+                              setActiveTab("agency");
+                            }}
+                            className="py-1 px-1.5 bg-slate-800 hover:bg-slate-700 text-teal-300 text-[10px] font-bold rounded-lg text-center truncate cursor-pointer transition-colors"
+                          >
+                            Agency View
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Standard Facebook-Style Navigation List (For all users) */}
+                  <div className="space-y-0.5">
+                    {/* Settings & Privacy -> Edit Profile */}
                     <button
                       onClick={() => {
-                        switchDemoUser("Admin");
                         setIsProfileMenuOpen(false);
-                        setActiveTab("admin");
+                        setIsEditProfileModalOpen(true);
                       }}
-                      className="w-full text-left px-2.5 py-1.5 hover:bg-slate-800 rounded-lg text-[11px] font-bold text-amber-300 flex items-center justify-between"
+                      className="w-full text-left p-2 hover:bg-slate-800 rounded-xl transition-colors flex items-center space-x-3 group cursor-pointer"
                     >
-                      <span>👑 Administrator Dashboard</span>
-                      <ShieldCheck className="w-3 h-3 text-amber-400" />
+                      <div className="w-9 h-9 rounded-full bg-slate-800 text-slate-300 flex items-center justify-center shrink-0 group-hover:bg-slate-700 group-hover:text-white transition-colors">
+                        <Settings className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-xs text-white group-hover:text-emerald-300">
+                          Settings & Profile
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          National ID, contact numbers & account info
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-slate-300 shrink-0" />
                     </button>
 
-                    <button
-                      onClick={() => {
-                        switchDemoUser("Employer");
-                        setIsProfileMenuOpen(false);
-                        setActiveTab("employer" as any);
-                      }}
-                      className="w-full text-left px-2.5 py-1.5 hover:bg-slate-800 rounded-lg text-[11px] font-bold text-emerald-300 flex items-center justify-between"
+                    {/* 24/7 Help & WhatsApp Support */}
+                    <a
+                      href="https://wa.me/263785458828?text=Hello%20Zimbabwe%20Maid%20Center%20Support"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                      className="w-full text-left p-2 hover:bg-slate-800 rounded-xl transition-colors flex items-center space-x-3 group cursor-pointer"
                     >
-                      <span>🏢 Employer Dashboard (Mrs. Chigumba)</span>
-                      <Building2 className="w-3 h-3 text-emerald-400" />
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        switchDemoUser("Worker");
-                        setIsProfileMenuOpen(false);
-                        setActiveTab("maid" as any);
-                      }}
-                      className="w-full text-left px-2.5 py-1.5 hover:bg-slate-800 rounded-lg text-[11px] font-bold text-sky-300 flex items-center justify-between"
-                    >
-                      <span>🧹 Maid / Worker Dashboard (Sizani)</span>
-                      <UserCheck className="w-3 h-3 text-sky-400" />
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        switchDemoUser("Agency");
-                        setIsProfileMenuOpen(false);
-                        setActiveTab("agency");
-                      }}
-                      className="w-full text-left px-2.5 py-1.5 hover:bg-slate-800 rounded-lg text-[11px] font-bold text-teal-300 flex items-center justify-between"
-                    >
-                      <span>🏢 Placement Agency View</span>
-                      <Building2 className="w-3 h-3 text-teal-400" />
-                    </button>
+                      <div className="w-9 h-9 rounded-full bg-slate-800 text-[#25D366] flex items-center justify-center shrink-0 group-hover:bg-[#25D366]/20 transition-colors">
+                        <MessageCircle className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-bold text-xs text-white group-hover:text-[#25D366]">
+                            Help & Support
+                          </p>
+                          <span className="text-[9px] bg-emerald-500/20 text-emerald-300 font-bold px-1 rounded">
+                            24/7 Live
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          WhatsApp Concierge (+263 785 458 828)
+                        </p>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-500 group-hover:text-slate-300 shrink-0" />
+                    </a>
                   </div>
 
-                  <div className="border-t border-slate-800 pt-2 flex justify-between items-center">
-                    <button
-                      onClick={() => {
-                        logout();
-                        setIsProfileMenuOpen(false);
-                      }}
-                      className="text-rose-400 hover:text-rose-300 font-bold text-[11px] flex items-center gap-1 w-full px-2 py-1 hover:bg-rose-950/30 rounded-lg transition-colors"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
+                  <div className="h-px bg-slate-800/80 my-1"></div>
+
+                  {/* Log Out */}
+                  <button
+                    onClick={() => {
+                      logout();
+                      setIsProfileMenuOpen(false);
+                    }}
+                    className="w-full text-left p-2 hover:bg-rose-950/40 rounded-xl transition-colors flex items-center space-x-3 group cursor-pointer"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 group-hover:bg-rose-500/30 transition-colors">
+                      <LogOut className="w-4 h-4" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-xs text-rose-400 group-hover:text-rose-300">
+                        Log Out
+                      </p>
+                      <p className="text-[10px] text-rose-400/60 truncate">
+                        End session on this device
+                      </p>
+                    </div>
+                  </button>
                 </div>
               )}
             </div>

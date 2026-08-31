@@ -283,6 +283,13 @@ export interface JobApplicationRecord {
   appliedDate: string;
   status: "Pending" | "Shortlisted" | "Approved" | "Rejected" | "Hired" | "Withdrawn";
   coverNote?: string;
+  applicantPhone?: string;
+  applicantWhatsApp?: string;
+  applicantExperience?: string;
+  applicantSkills?: string;
+  hasPoliceClearance?: boolean;
+  hasReferences?: boolean;
+  isUnlocked?: boolean;
   updatedAt?: string;
 }
 

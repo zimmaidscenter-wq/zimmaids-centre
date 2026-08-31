@@ -70,6 +70,20 @@ interface PlatformContextType {
   maidApplications: JobApplicationRecord[]; // Applications sent by current maid
   employerApplications: JobApplicationRecord[]; // Applications received for current employer's jobs
   applyForJob: (jobId: string, coverNote?: string) => Promise<{ success: boolean; error?: string }>;
+  chooseAndUnlockApplicant: (appId: string) => Promise<{ success: boolean; error?: string }>;
+  submitCustomJobApplication: (appData: {
+    jobId: string;
+    maidName: string;
+    maidAge?: number;
+    maidPhoto?: string;
+    phone: string;
+    whatsapp?: string;
+    experienceYears?: string;
+    skills?: string;
+    coverNote?: string;
+    hasPoliceClearance?: boolean;
+    hasReferences?: boolean;
+  }) => Promise<{ success: boolean; error?: string }>;
   updateApplicationStatus: (appId: string, status: JobApplicationRecord["status"]) => void;
 
   // Media & Portfolio Upload System
@@ -977,6 +991,137 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return { success: true };
   };
 
+  const chooseAndUnlockApplicant = async (appId: string): Promise<{ success: boolean; error?: string }> => {
+    const application = allApplications.find((a) => a.id === appId);
+    if (!application) return { success: false, error: "Application not found" };
+
+    const fee = pricingSettings.premiumMaidAccessFeeUSD; // e.g. $15 USD placement fee
+    if (currentWallet.balance < fee) {
+      return {
+        success: false,
+        error: `Insufficient wallet balance ($${currentWallet.balance.toFixed(2)} USD). Placement and contact unlock fee is $${fee.toFixed(2)} USD. Please deposit funds via Paynow to proceed.`,
+      };
+    }
+
+    const spendRes = await spendFromWallet(
+      `Placement Fee & Candidate Contact Unlock: ${application.maidName}`,
+      fee,
+      { applicationId: appId, maidId: application.maidId }
+    );
+
+    if (!spendRes.success) {
+      return { success: false, error: spendRes.error };
+    }
+
+    // 1. Mark application as Approved/Hired and Unlocked
+    setAllApplications((prev) =>
+      prev.map((a) =>
+        a.id === appId
+          ? {
+              ...a,
+              status: "Approved",
+              isUnlocked: true,
+              updatedAt: new Date().toISOString(),
+            }
+          : a
+      )
+    );
+
+    // 2. Mark maid profile unlocked for this employer
+    setAllMaidProfiles((prev) =>
+      prev.map((m) =>
+        m.userId === application.maidId || m.id === application.maidId
+          ? {
+              ...m,
+              unlockedByEmployerIds: m.unlockedByEmployerIds.includes(currentUser.id)
+                ? m.unlockedByEmployerIds
+                : [...m.unlockedByEmployerIds, currentUser.id],
+            }
+          : m
+      )
+    );
+
+    // 3. Notify Maid
+    const maidNotif: PlatformNotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: application.maidId,
+      role: "maid",
+      title: "Employer Chose You for Placement! 🎉",
+      message: `${currentUser.name} has chosen your application for '${application.jobTitle}' and paid the platform placement fee. They will reach out to you directly via Phone/WhatsApp.`,
+      type: "application",
+      isRead: false,
+      createdAt: new Date().toISOString().replace("T", " ").substring(0, 16),
+    };
+    setNotifications((prev) => [maidNotif, ...prev]);
+
+    return { success: true };
+  };
+
+  const submitCustomJobApplication = async (appData: {
+    jobId: string;
+    maidName: string;
+    maidAge?: number;
+    maidPhoto?: string;
+    phone: string;
+    whatsapp?: string;
+    experienceYears?: string;
+    skills?: string;
+    coverNote?: string;
+    hasPoliceClearance?: boolean;
+    hasReferences?: boolean;
+  }): Promise<{ success: boolean; error?: string }> => {
+    const job = allJobs.find((j) => j.id === appData.jobId);
+    if (!job) return { success: false, error: "Job vacancy not found." };
+
+    const newApp: JobApplicationRecord = {
+      id: `app-${Date.now()}`,
+      maidId: currentUser.id || `worker-${Date.now()}`,
+      jobId: job.id,
+      employerId: job.employerId,
+      maidName: appData.maidName,
+      maidAge: appData.maidAge || 29,
+      maidPhoto:
+        appData.maidPhoto ||
+        "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400",
+      jobTitle: job.title,
+      jobSalary: job.salary,
+      jobLocation: `${job.location} (${job.suburb})`,
+      employerTitleSurname: job.employerTitleSurname,
+      appliedDate: new Date().toISOString().split("T")[0],
+      status: "Pending",
+      coverNote: appData.coverNote || "Interested in this vacancy.",
+      applicantPhone: appData.phone,
+      applicantWhatsApp: appData.whatsapp || appData.phone,
+      applicantExperience: appData.experienceYears,
+      applicantSkills: appData.skills,
+      hasPoliceClearance: appData.hasPoliceClearance ?? true,
+      hasReferences: appData.hasReferences ?? true,
+      isUnlocked: false,
+    };
+
+    setAllApplications((prev) => [newApp, ...prev]);
+
+    // Increment applicant count on job
+    setAllJobs((prev) =>
+      prev.map((j) => (j.id === appData.jobId ? { ...j, applicantCount: j.applicantCount + 1 } : j))
+    );
+
+    // Notify employer
+    const employerNotif: PlatformNotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: job.employerId,
+      role: "employer",
+      title: "New Job Application Received",
+      message: `${appData.maidName} has applied for '${job.title}'. Review their vetted details in your Applications tab.`,
+      type: "application",
+      isRead: false,
+      createdAt: new Date().toISOString().replace("T", " ").substring(0, 16),
+    };
+    setNotifications((prev) => [employerNotif, ...prev]);
+
+    return { success: true };
+  };
+
   const updateApplicationStatus = (appId: string, status: JobApplicationRecord["status"]) => {
     setAllApplications((prev) =>
       prev.map((a) => {
@@ -1643,6 +1788,8 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         maidApplications,
         employerApplications,
         applyForJob,
+        chooseAndUnlockApplicant,
+        submitCustomJobApplication,
         updateApplicationStatus,
         uploadProfilePhoto,
         removeProfilePhoto,
