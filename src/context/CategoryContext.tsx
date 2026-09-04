@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from "react";
+import { useAuth } from "./AuthContext";
 import { MarketplaceCategory, CategoryStats, FeaturedWorkerPayment } from "../types/category";
 import { DEFAULT_CATEGORIES, INITIAL_FEATURED_PAYMENTS } from "../data/categoryData";
 import { SAMPLE_WORKERS, SAMPLE_JOBS } from "../data/mockData";
@@ -66,6 +67,8 @@ const WORKERS_STORAGE_KEY = "zmc_all_workers_dynamic_v2";
 const JOBS_STORAGE_KEY = "zmc_all_jobs_dynamic_v2";
 
 export const CategoryProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { currentUser: authUser } = useAuth();
+
   // 1. Dynamic Categories State
   const [categories, setCategories] = useState<MarketplaceCategory[]>(() => {
     try {
@@ -111,15 +114,11 @@ export const CategoryProvider: React.FC<{ children: ReactNode }> = ({ children }
         role = idx % 2 === 0 ? "Maids" : "Gardener";
       }
 
-      // Pre-seed featured status for top verified workers (w1 and w3)
-      const isFeatured = w.id === "w1" || w.id === "w3";
-      const featuredExpiresAt = isFeatured ? "2026-09-15T23:59:59.000Z" : undefined;
-
       return {
         ...w,
         role: role as any,
-        isFeatured,
-        featuredExpiresAt,
+        isFeatured: false,
+        featuredExpiresAt: undefined,
       };
     });
   });
@@ -204,6 +203,62 @@ export const CategoryProvider: React.FC<{ children: ReactNode }> = ({ children }
       console.error("Error persisting featured payments:", e);
     }
   }, [featuredPayments]);
+
+  // Synchronize newly registered or logged in worker so they appear at the very top of allWorkers!
+  useEffect(() => {
+    if (!authUser || authUser.role !== "Worker") return;
+
+    setAllWorkers((prev) => {
+      const existing = prev.find(
+        (w) => w.id === authUser.id || (w.email && w.email.toLowerCase() === authUser.email.toLowerCase())
+      );
+      const newWorker: WorkerProfile = {
+        id: authUser.id,
+        fullName: authUser.fullName,
+        role: (authUser.specificProfession as any) || existing?.role || "Maids",
+        avatarUrl: authUser.avatarUrl || existing?.avatarUrl || "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=400",
+        rating: existing?.rating || 5.0,
+        reviewCount: existing?.reviewCount || 0,
+        hourlyRateUSD: existing?.hourlyRateUSD || 5,
+        monthlyRateUSD: existing?.monthlyRateUSD || 220,
+        province: authUser.city || "Harare",
+        district: authUser.suburb || "Central",
+        city: (authUser.city as any) || "Harare",
+        suburb: authUser.suburb || "Central",
+        distanceKm: 2,
+        experienceYears: 3,
+        education: "O-Level",
+        age: 28,
+        gender: "Female",
+        willingToLiveIn: true,
+        willingToLiveOut: true,
+        languages: ["English", "Shona"],
+        skills: ["Housekeeping", "Cleaning", "Laundry", "Cooking", "Childcare"],
+        bio: `Newly registered verified worker in ${authUser.city || "Harare"}. Available for immediate placement.`,
+        verifications: {
+          idCheck: true,
+          policeClearance: authUser.approvalStatus === "Approved",
+          referenceVerified: authUser.approvalStatus === "Approved",
+          medicalCert: true,
+        },
+        isVerified: authUser.isVerified || authUser.approvalStatus === "Approved",
+        availability: "Full-Time",
+        policeClearanceDate: "2026-01-10",
+        aiTrustScore: 92,
+        status: "Active",
+        isNew: true,
+        submittedDate: new Date().toISOString(),
+        phoneNumber: authUser.phoneNumber || "+263 785 458 828",
+        whatsappNumber: authUser.phoneNumber || "+263 785 458 828",
+        email: authUser.email,
+      };
+
+      const filtered = prev.filter(
+        (w) => w.id !== authUser.id && (!w.email || w.email.toLowerCase() !== authUser.email.toLowerCase())
+      );
+      return [newWorker, ...filtered];
+    });
+  }, [authUser]);
 
   // Helper: Normalize raw role/category string into matched category name
   const normalizeCategoryName = (rawRoleOrCategory: string): string => {
@@ -526,7 +581,7 @@ export const CategoryProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const addWorkerProfile = (worker: WorkerProfile) => {
-    setAllWorkers((prev) => [worker, ...prev]);
+    setAllWorkers((prev) => [{ ...worker, isNew: true, submittedDate: worker.submittedDate || new Date().toISOString() }, ...prev]);
   };
 
   const updateWorkerProfile = (workerId: string, updates: Partial<WorkerProfile>) => {

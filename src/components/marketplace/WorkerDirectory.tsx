@@ -3,7 +3,6 @@ import { WorkerProfile, JobPosting, UserRole, CityLocation, EmployerHiringReques
 import { WorkerProfileModal } from "./WorkerProfileModal";
 import { EmployerHiringModal } from "../jobs/EmployerHiringModal";
 import { ALL_ZIMBABWE_CITIES, getSuburbsForCity } from "../../data/zimbabweLocations";
-import { PaynowModal, PaynowPaymentDetails, PaynowReceipt } from "../payment/PaynowModal";
 import { useAuth } from "../../context/AuthContext";
 import { useCategories } from "../../context/CategoryContext";
 import {
@@ -53,58 +52,14 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
   const [cityFilter, setCityFilter] = useState<string>(selectedCity || "Harare");
   const [suburbFilter, setSuburbFilter] = useState<string>("All Suburbs");
   const [verifiedOnlyFilter, setVerifiedOnlyFilter] = useState<boolean>(true); // Default to verified screened candidates
-  const [featuredOnlyFilter, setFeaturedOnlyFilter] = useState<boolean>(false);
   const [screeningFilter, setScreeningFilter] = useState<"all" | "police" | "references">("all");
   const [isHiringModalOpen, setIsHiringModalOpen] = useState<boolean>(false);
-
-  // Paynow boosting state
-  const [isPaynowOpen, setIsPaynowOpen] = useState(false);
-  const [paynowDetails, setPaynowDetails] = useState<PaynowPaymentDetails | null>(null);
-  const [targetWorkerToFeature, setTargetWorkerToFeature] = useState<WorkerProfile | null>(null);
-  const [pendingPaymentRef, setPendingPaymentRef] = useState<string | null>(null);
 
   const suburbs = getSuburbsForCity(cityFilter);
 
   const handleCityChange = (newCity: string) => {
     setCityFilter(newCity);
     setSuburbFilter("All Suburbs");
-  };
-
-  const handleTriggerCardFeature = (worker: WorkerProfile, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setTargetWorkerToFeature(worker);
-    const res = initiateFeaturedPayment(worker.id, worker.fullName, worker.role, "Paynow USD");
-    setPendingPaymentRef(res.payment.paymentReference);
-    setPaynowDetails({
-      title: `⭐ Place ${worker.fullName} on Featured Maid List (30 Days)`,
-      amountUSD: 3.0,
-      serviceType: "featured_maid",
-      targetId: worker.id,
-      targetName: worker.fullName,
-      customReference: res.payment.paymentReference,
-    });
-    setIsPaynowOpen(true);
-  };
-
-  const handlePaynowFeatureSuccess = (receipt: PaynowReceipt) => {
-    const ref = receipt.paynowReference || receipt.transactionReference;
-    if (pendingPaymentRef) {
-      confirmFeaturedPayment(pendingPaymentRef, ref);
-    } else if (targetWorkerToFeature) {
-      const res = initiateFeaturedPayment(targetWorkerToFeature.id, targetWorkerToFeature.fullName, targetWorkerToFeature.role, "Paynow USD");
-      confirmFeaturedPayment(res.payment.paymentReference, ref);
-    }
-    if (targetWorkerToFeature) {
-      const updatedWorker: WorkerProfile = {
-        ...targetWorkerToFeature,
-        isFeatured: true,
-        featuredExpiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-      };
-      updateWorkerProfile(updatedWorker.id, updatedWorker);
-      if (selectedWorker && selectedWorker.id === targetWorkerToFeature.id) {
-        setSelectedWorker(updatedWorker);
-      }
-    }
   };
 
   const handleUpdateWorker = (updated: WorkerProfile) => {
@@ -176,7 +131,6 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
 
       // Only show verified screened candidates when verifiedOnlyFilter is on
       const matchesVerified = !verifiedOnlyFilter || worker.isVerified;
-      const matchesFeatured = !featuredOnlyFilter || worker.isFeatured;
       
       // Screening sub-filter
       const matchesScreening =
@@ -198,12 +152,15 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
         worker.suburb.toLowerCase().includes(searchTerm.toLowerCase()) ||
         worker.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (worker.qualifications && worker.qualifications.some((q) => q.toLowerCase().includes(searchTerm.toLowerCase())));
-      return matchesCategory && matchesCity && matchesSuburb && matchesSearch && matchesVerified && matchesFeatured && matchesScreening;
+      return matchesCategory && matchesCity && matchesSuburb && matchesSearch && matchesVerified && matchesScreening;
     })
     .sort((a, b) => {
-      // Featured maids always rank at the top
-      if (a.isFeatured && !b.isFeatured) return -1;
-      if (!a.isFeatured && b.isFeatured) return 1;
+      // New Signed up workers MUST be on top of the list!
+      if (a.isNew && !b.isNew) return -1;
+      if (!a.isNew && b.isNew) return 1;
+      const dateA = a.submittedDate ? new Date(a.submittedDate).getTime() : 0;
+      const dateB = b.submittedDate ? new Date(b.submittedDate).getTime() : 0;
+      if (dateB !== dateA) return dateB - dateA;
       return b.rating - a.rating;
     });
 
@@ -378,12 +335,9 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
           {/* Category Pills & Filters */}
           <div className="flex items-center space-x-1.5 overflow-x-auto pb-1 max-w-full">
             <button
-              onClick={() => {
-                setActiveCategory("All");
-                setFeaturedOnlyFilter(false);
-              }}
+              onClick={() => setActiveCategory("All")}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                activeCategory === "All" && !featuredOnlyFilter
+                activeCategory === "All"
                   ? "bg-emerald-800 text-white shadow"
                   : "bg-slate-100 text-slate-700 hover:bg-slate-200"
               }`}
@@ -391,28 +345,12 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
               All Roles
             </button>
 
-            {/* Featured Maid Special Filter Tab */}
-            <button
-              onClick={() => setFeaturedOnlyFilter(!featuredOnlyFilter)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all flex items-center space-x-1.5 cursor-pointer ${
-                featuredOnlyFilter
-                  ? "bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-400/80"
-                  : "bg-amber-50 text-amber-900 border border-amber-300 hover:bg-amber-100"
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5 fill-current" />
-              <span>⭐ Featured Maids ($3 Boosted)</span>
-            </button>
-
             {publicCategories.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => {
-                  setActiveCategory(cat.name);
-                  setFeaturedOnlyFilter(false);
-                }}
+                onClick={() => setActiveCategory(cat.name)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                  activeCategory === cat.name && !featuredOnlyFilter
+                  activeCategory === cat.name
                     ? "bg-emerald-800 text-white shadow"
                     : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                 }`}
@@ -437,20 +375,20 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
             <div
               key={worker.id}
               className={`rounded-3xl p-5 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between group relative ${
-                worker.isFeatured
-                  ? "bg-gradient-to-b from-amber-50/40 via-white to-white border-2 border-amber-300 ring-2 ring-amber-400/30"
+                worker.isNew
+                  ? "bg-gradient-to-b from-emerald-50/50 via-white to-white border-2 border-emerald-300 ring-2 ring-emerald-500/20"
                   : "bg-white border border-slate-200"
               }`}
             >
               <div>
-                {/* Featured Ribbon */}
-                {worker.isFeatured && (
-                  <div className="mb-3 -mt-2 -mx-2 flex items-center justify-between px-3 py-1 bg-gradient-to-r from-amber-400 via-yellow-400 to-amber-400 text-slate-950 rounded-xl text-[10px] font-black shadow-xs">
+                {/* New Candidate Ribbon */}
+                {worker.isNew && (
+                  <div className="mb-3 -mt-2 -mx-2 flex items-center justify-between px-3 py-1 bg-gradient-to-r from-emerald-600 to-teal-700 text-white rounded-xl text-[10px] font-black shadow-xs">
                     <span className="flex items-center gap-1">
-                      <Sparkles className="w-3 h-3 fill-slate-950" />
-                      <span>⭐ FEATURED CANDIDATE • VERIFIED PRIORITY</span>
+                      <Sparkles className="w-3 h-3 fill-white" />
+                      <span>NEW CANDIDATE • RECENTLY REGISTERED</span>
                     </span>
-                    <span className="text-[9px] opacity-80">Paid via Paynow ($3)</span>
+                    <span className="text-[9px] bg-white/20 px-1.5 py-0.5 rounded font-black uppercase">New</span>
                   </div>
                 )}
 
@@ -462,7 +400,7 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
                         src={worker.avatarUrl}
                         alt={worker.fullName}
                         className={`w-14 h-14 rounded-2xl object-cover border ${
-                          worker.isFeatured ? "border-amber-300 ring-2 ring-amber-400/50" : "border-slate-200"
+                          worker.isNew ? "border-emerald-400 ring-2 ring-emerald-500/40" : "border-slate-200"
                         }`}
                       />
                       <div className="absolute -bottom-1 -right-1 bg-emerald-500 text-slate-950 p-1 rounded-md shadow">
@@ -479,9 +417,9 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
                         <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-800 text-[11px] font-semibold rounded-md border border-emerald-200/60">
                           {worker.role}
                         </span>
-                        {worker.isFeatured && (
-                          <span className="px-1.5 py-0.5 bg-amber-100 text-amber-900 text-[9px] font-black rounded border border-amber-300">
-                            ★ TOP
+                        {worker.isNew && (
+                          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[9px] font-black rounded border border-emerald-300">
+                            NEW
                           </span>
                         )}
                       </div>
@@ -566,15 +504,15 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
                     <div className="text-sm font-black text-emerald-800 font-mono">{priceLabel}</div>
                   </div>
 
-                  {!worker.isFeatured && (
-                    <button
-                      onClick={(e) => handleTriggerCardFeature(worker, e)}
-                      className="px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 rounded-lg text-[10px] font-black flex items-center gap-1 transition-colors cursor-pointer"
-                      title="Promote to Featured Maid List ($3 via Paynow)"
-                    >
-                      <Sparkles className="w-3 h-3 text-amber-600 fill-amber-600" />
-                      <span>Feature ($3)</span>
-                    </button>
+                  {worker.isNew ? (
+                    <span className="px-2.5 py-1 bg-emerald-50 text-emerald-800 border border-emerald-200/80 rounded-lg text-[10px] font-black flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-emerald-600" />
+                      <span>Newly Registered</span>
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 bg-slate-50 text-slate-500 rounded text-[10px] font-semibold">
+                      {worker.availability}
+                    </span>
                   )}
                 </div>
 
@@ -625,14 +563,6 @@ export const WorkerDirectory: React.FC<WorkerDirectoryProps> = ({
           setIsHiringModalOpen(false);
           onNavigateToJobs?.();
         }}
-      />
-
-      {/* Quick Paynow Modal for Worker Boost */}
-      <PaynowModal
-        isOpen={isPaynowOpen}
-        onClose={() => setIsPaynowOpen(false)}
-        details={paynowDetails}
-        onSuccess={handlePaynowFeatureSuccess}
       />
     </div>
   );

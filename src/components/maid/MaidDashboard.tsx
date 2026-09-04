@@ -58,6 +58,7 @@ export const MaidDashboard: React.FC = () => {
     allJobs,
     maidApplications,
     applyForJob,
+    payWorkerApplicationFee,
     currentWallet,
     createPaynowDeposit,
     verifyPaynowPayment,
@@ -138,6 +139,17 @@ export const MaidDashboard: React.FC = () => {
   const [isSubmittingApp, setIsSubmittingApp] = useState(false);
   const [appFeedback, setAppFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // Worker $3 Job Application Pass State & Modal
+  const [isPassModalOpen, setIsPassModalOpen] = useState(false);
+  const [isActivatingPass, setIsActivatingPass] = useState(false);
+  const [passPaymentMethod, setPassPaymentMethod] = useState<"ecocash" | "onemoney" | "card" | "innbucks">("ecocash");
+  const [passPhoneInput, setPassPhoneInput] = useState(
+    currentMaidProfile?.phoneNumber || currentUser?.phone || "+263 785 458 828"
+  );
+  const [passFeedback, setPassFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  const hasApplicationPass = !!currentMaidProfile?.isDepositPaid || !!(currentUser as any)?.isDepositPaid;
+
   // Worker Paynow Wallet Deposit Modal
   const [isAddFundsOpen, setIsAddFundsOpen] = useState(false);
   const [depositAmount, setDepositAmount] = useState<number>(20);
@@ -158,12 +170,13 @@ export const MaidDashboard: React.FC = () => {
 
   // Browser Back Button & Escape key support for Maid Modals & Lightbox
   useEffect(() => {
-    if (!selectedJobToApply && !isAddFundsOpen) return;
+    if (!selectedJobToApply && !isAddFundsOpen && !isPassModalOpen) return;
 
     const stateObj = {
       maidModalOpen: true,
       selectedJobId: selectedJobToApply?.id,
       isAddFundsOpen,
+      isPassModalOpen,
     };
     window.history.pushState(stateObj, "");
 
@@ -174,6 +187,8 @@ export const MaidDashboard: React.FC = () => {
         setSelectedJobToApply(null);
       } else if (isAddFundsOpen) {
         setIsAddFundsOpen(false);
+      } else if (isPassModalOpen) {
+        setIsPassModalOpen(false);
       }
     };
 
@@ -185,6 +200,8 @@ export const MaidDashboard: React.FC = () => {
           setSelectedJobToApply(null);
         } else if (isAddFundsOpen) {
           setIsAddFundsOpen(false);
+        } else if (isPassModalOpen) {
+          setIsPassModalOpen(false);
         }
       }
     };
@@ -196,7 +213,7 @@ export const MaidDashboard: React.FC = () => {
       window.removeEventListener("popstate", handlePopState);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [selectedJobToApply, isAddFundsOpen, isLightboxOpen]);
+  }, [selectedJobToApply, isAddFundsOpen, isLightboxOpen, isPassModalOpen]);
 
   const openDocLightbox = (images: LightboxImageItem[], index = 0) => {
     setLightboxImages(images);
@@ -383,9 +400,50 @@ export const MaidDashboard: React.FC = () => {
     return true;
   });
 
+  // Worker $3 Job Application Pass Activation
+  const handleActivateWorkerPass = async () => {
+    setIsActivatingPass(true);
+    setPassFeedback(null);
+    try {
+      const ref = `PNW-WK-${Date.now().toString().slice(-6)}`;
+      const res = await payWorkerApplicationFee(currentUser.id, ref);
+      if (res.success) {
+        setPassFeedback({
+          type: "success",
+          text: "✓ Payment Confirmed! Your $3.00 USD Worker Application Pass is active. You can now apply for all household vacancies and your contact details will be automatically unlocked to subscribed employers.",
+        });
+        setTimeout(() => {
+          setIsPassModalOpen(false);
+          setPassFeedback(null);
+        }, 1800);
+      } else {
+        setPassFeedback({
+          type: "error",
+          text: res.error || "Failed to process Paynow payment. Please try again.",
+        });
+      }
+    } catch (e: any) {
+      setPassFeedback({
+        type: "error",
+        text: e?.message || "An unexpected error occurred during payment processing.",
+      });
+    } finally {
+      setIsActivatingPass(false);
+    }
+  };
+
   // Handle Apply for Job
   const handleApply = async () => {
     if (!selectedJobToApply) return;
+
+    if (!hasApplicationPass) {
+      setAppFeedback({
+        type: "error",
+        text: "Worker Application Pass Required: You must pay the $3.00 USD fee before applying for jobs. Please click 'Pay $3.00 USD via Paynow' below.",
+      });
+      return;
+    }
+
     setIsSubmittingApp(true);
     setAppFeedback(null);
 
@@ -395,7 +453,7 @@ export const MaidDashboard: React.FC = () => {
     if (res.success) {
       setAppFeedback({
         type: "success",
-        text: `Application submitted successfully to ${selectedJobToApply.employerTitleSurname}!`,
+        text: `Application submitted successfully to ${selectedJobToApply.employerTitleSurname}! Your verified profile and contacts are unlocked to subscribed employers.`,
       });
       setTimeout(() => {
         setSelectedJobToApply(null);
@@ -403,10 +461,17 @@ export const MaidDashboard: React.FC = () => {
         setActiveTab("my-applications");
       }, 1500);
     } else {
-      setAppFeedback({
-        type: "error",
-        text: res.error || "Failed to submit application.",
-      });
+      if (res.error === "WORKER_FEE_REQUIRED") {
+        setAppFeedback({
+          type: "error",
+          text: "Worker Application Pass Required ($3.00 USD): You must pay the $3.00 fee before applying for household vacancies.",
+        });
+      } else {
+        setAppFeedback({
+          type: "error",
+          text: res.error || "Failed to submit application.",
+        });
+      }
     }
   };
 
@@ -1596,6 +1661,61 @@ export const MaidDashboard: React.FC = () => {
             </div>
           </div>
 
+          {/* Worker $3 Application Pass Status Banner */}
+          {hasApplicationPass ? (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-xs shrink-0">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-sm font-black text-emerald-950 flex items-center gap-2">
+                    <span>Worker Application Pass Active</span>
+                    <span className="px-2 py-0.5 bg-emerald-200 text-emerald-900 text-[10px] font-black rounded-md uppercase">
+                      $3.00 USD Verified
+                    </span>
+                  </div>
+                  <p className="text-xs text-emerald-800 mt-0.5">
+                    You are verified and eligible to apply for all household jobs. Your direct contact details are automatically unlocked to subscribed employers.
+                  </p>
+                </div>
+              </div>
+              <span className="px-3 py-1 bg-emerald-600 text-white text-[11px] font-black rounded-full uppercase tracking-wider shrink-0">
+                ✓ Pass Active
+              </span>
+            </div>
+          ) : (
+            <div className="bg-gradient-to-r from-amber-50 via-amber-100/50 to-amber-50 border-2 border-amber-300 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm">
+              <div className="flex items-start gap-3.5">
+                <div className="p-2.5 bg-amber-500 text-slate-950 rounded-xl shadow-xs shrink-0 mt-0.5">
+                  <CreditCard className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-sm font-black text-amber-950 flex items-center gap-2">
+                    <span>$3.00 USD Application Pass Required to Apply</span>
+                    <span className="px-2 py-0.5 bg-amber-200 text-amber-900 text-[10px] font-black rounded-md">
+                      Policy
+                    </span>
+                  </div>
+                  <p className="text-xs text-amber-900 mt-1 max-w-2xl">
+                    Only workers who paid the $3 USD application fee can apply for household vacancies. Once paid, your verified profile and contact details are automatically unlocked to subscribed employers.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setPassFeedback(null);
+                  setIsPassModalOpen(true);
+                }}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black rounded-xl shadow-md flex items-center gap-2 shrink-0 cursor-pointer active:scale-95 transition-all"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Pay $3.00 USD via Paynow</span>
+              </button>
+            </div>
+          )}
+
           {/* Job Search & Filter Toolbar */}
           <div className="bg-white rounded-3xl p-5 border border-slate-200 shadow-sm space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1856,6 +1976,33 @@ export const MaidDashboard: React.FC = () => {
               </div>
             )}
 
+            {!hasApplicationPass && (
+              <div className="p-4 bg-amber-50 border-2 border-amber-300 rounded-2xl space-y-3">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="text-xs font-black text-amber-950 uppercase tracking-wider">
+                      $3.00 USD Application Pass Required
+                    </h4>
+                    <p className="text-xs text-amber-900 mt-1">
+                      Policy requirement: domestic workers must pay the $3 USD fee to apply for jobs and unlock their verified contact details to subscribed employers.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPassFeedback(null);
+                    setIsPassModalOpen(true);
+                  }}
+                  className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-md flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+                >
+                  <CreditCard className="w-4 h-4" />
+                  <span>Activate $3.00 USD Pass via Paynow</span>
+                </button>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1.5">Application Note to Employer</label>
@@ -1886,8 +2033,8 @@ export const MaidDashboard: React.FC = () => {
                 <button
                   type="button"
                   onClick={handleApply}
-                  disabled={isSubmittingApp}
-                  className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5 disabled:opacity-50"
+                  disabled={isSubmittingApp || !hasApplicationPass}
+                  className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-600/20 transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="w-3.5 h-3.5" />
                   {isSubmittingApp ? "Submitting..." : "Submit Application"}
@@ -2035,6 +2182,135 @@ export const MaidDashboard: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* WORKER $3 APPLICATION PASS MODAL */}
+      {isPassModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-200 relative my-8 space-y-6">
+            <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+              <button
+                type="button"
+                onClick={() => setIsPassModalOpen(false)}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all active:scale-95 border border-slate-200"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-slate-500" />
+                <span>Back</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsPassModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-all"
+                title="Close (Escape)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-black rounded-full uppercase tracking-wider">
+                <ShieldCheck className="w-3.5 h-3.5" /> Worker Application Pass
+              </div>
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">Activate $3.00 USD Pass</h2>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                Pay via Paynow Zimbabwe to apply for all household job vacancies. Once activated, your verified profile and direct contact details are unlocked to subscribed employers.
+              </p>
+            </div>
+
+            {passFeedback && (
+              <div
+                className={`p-4 rounded-2xl text-xs font-semibold flex items-center gap-2 ${
+                  passFeedback.type === "success"
+                    ? "bg-emerald-50 text-emerald-900 border border-emerald-200"
+                    : "bg-rose-50 text-rose-900 border border-rose-200"
+                }`}
+              >
+                {passFeedback.type === "success" ? (
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-rose-600 shrink-0" />
+                )}
+                <span>{passFeedback.text}</span>
+              </div>
+            )}
+
+            <div className="space-y-5">
+              {/* Fee summary card */}
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-slate-500 font-medium">Application Pass Fee</span>
+                  <span className="text-lg font-black text-slate-900">$3.00 USD</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-200/60">
+                  <span>Job Eligibility</span>
+                  <span className="font-bold text-emerald-700">Unlimited Household Vacancies</span>
+                </div>
+                <div className="flex items-center justify-between text-[11px] text-slate-500">
+                  <span>Employer Access</span>
+                  <span className="font-bold text-emerald-700">Unlocked to Subscribed Employers</span>
+                </div>
+              </div>
+
+              {/* Payment Method Selector */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-2">Select Payment Method (Paynow)</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: "ecocash", label: "EcoCash USD", note: "Mobile PIN prompt" },
+                    { id: "onemoney", label: "OneMoney", note: "NetOne mobile" },
+                    { id: "card", label: "Visa / MasterCard", note: "Debit or credit" },
+                    { id: "innbucks", label: "InnBucks", note: "Instant checkout" },
+                  ].map((method) => (
+                    <button
+                      key={method.id}
+                      type="button"
+                      onClick={() => setPassPaymentMethod(method.id as any)}
+                      className={`p-3 rounded-2xl border text-left transition-all ${
+                        passPaymentMethod === method.id
+                          ? "border-emerald-600 bg-emerald-50/50 text-emerald-950 font-bold ring-1 ring-emerald-600"
+                          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <div className="text-xs font-bold">{method.label}</div>
+                      <div className="text-[10px] text-slate-400">{method.note}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mobile number if mobile money */}
+              {(passPaymentMethod === "ecocash" || passPaymentMethod === "onemoney" || passPaymentMethod === "innbucks") && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                    {passPaymentMethod === "ecocash"
+                      ? "EcoCash Mobile Number"
+                      : passPaymentMethod === "onemoney"
+                      ? "OneMoney Mobile Number"
+                      : "InnBucks Account / Phone"}
+                  </label>
+                  <input
+                    type="tel"
+                    value={passPhoneInput}
+                    onChange={(e) => setPassPhoneInput(e.target.value)}
+                    placeholder="+263 77..."
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 focus:bg-white focus:border-emerald-500 focus:outline-none font-medium"
+                  />
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={handleActivateWorkerPass}
+                disabled={isActivatingPass}
+                className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <CreditCard className="w-4 h-4" />
+                {isActivatingPass ? "Processing Paynow Transaction..." : "Confirm & Pay $3.00 USD via Paynow"}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -104,6 +104,7 @@ export interface PlatformUser {
   status: "Active" | "Pending Approval" | "Suspended";
   isVerified?: boolean;
   isMediaSuspended?: boolean;
+  isNew?: boolean;
 }
 
 export interface PreviousEmploymentRecord {
@@ -172,6 +173,8 @@ export interface MaidProfileRecord {
   };
   privateDocuments: PrivateWorkerDocument[];
   isFeatured?: boolean;
+  isDepositPaid?: boolean;
+  isNew?: boolean;
   unlockedByEmployerIds: string[]; // Employer user IDs who have paid access
   submittedForApprovalAt?: string;
   approvedAt?: string;
@@ -204,6 +207,8 @@ export interface PublicMaidProfile {
   verificationStatus: "Approved" | "Pending Approval" | "Rejected" | "Suspended";
   isVerified: boolean;
   isFeatured?: boolean;
+  isDepositPaid?: boolean;
+  isNew?: boolean;
   // If unlocked by the current employer, contact details are populated
   isUnlockedForCurrentEmployer?: boolean;
   unlockedPhone?: string;
@@ -237,6 +242,8 @@ export interface EmployerProfileRecord {
   subscriptionPlan?: "Monthly Unlimited" | "Quarterly Pass" | "Annual VIP";
   subscriptionExpiresAt?: string;
   status: "Approved" | "Pending Approval" | "Suspended";
+  accountStatus?: "Approved" | "Pending Approval" | "Suspended";
+  isNew?: boolean;
   createdAt: string;
   updatedAt: string;
 }

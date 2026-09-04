@@ -177,6 +177,8 @@ export interface WorkerProfile {
   address?: string;
   isRestricted?: boolean;
   restrictionReason?: string;
+  isNew?: boolean;
+  submittedDate?: string;
   // Enhanced Availability Status
   availabilityStatus?: "available_immediately" | "available_future_date" | "already_employed" | "temporarily_unavailable";
   availableFromDate?: string;

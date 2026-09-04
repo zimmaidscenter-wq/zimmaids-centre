@@ -622,38 +622,6 @@ export const EditProfileModal: React.FC<EditProfileModalProps> = ({
               </div>
             )}
 
-            {/* Featured Profile Promotion Banner ($3 Paynow Fee) */}
-            <div className="bg-gradient-to-r from-amber-500/15 via-emerald-500/15 to-teal-500/15 border border-amber-400/50 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xs">
-              <div className="flex items-center space-x-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-400 text-slate-950 font-black flex items-center justify-center shrink-0 shadow-sm">
-                  <Sparkles className="w-5 h-5 fill-slate-950" />
-                </div>
-                <div>
-                  <div className="flex items-center space-x-1.5">
-                    <span className="text-xs font-black text-slate-900">Featured Maid List Placement</span>
-                    <span className="px-1.5 py-0.2 bg-amber-200 text-amber-900 text-[10px] font-black rounded">
-                      $3.00 USD
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-600">
-                    Get 5x more hiring inquiries by placing your profile in the Featured Candidates section on top of search.
-                  </p>
-                </div>
-              </div>
-              {onOpenPaynowForFeature && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClose();
-                    onOpenPaynowForFeature();
-                  }}
-                  className="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-md transition-all shrink-0 active:scale-95"
-                >
-                  Feature Profile ($3 Paynow) →
-                </button>
-              )}
-            </div>
-
             {errorMsg && (
               <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-bold flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />

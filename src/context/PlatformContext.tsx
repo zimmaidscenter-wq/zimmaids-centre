@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { useAuth } from "./AuthContext";
 import {
   PlatformUser,
   MaidProfileRecord,
@@ -70,6 +71,7 @@ interface PlatformContextType {
   maidApplications: JobApplicationRecord[]; // Applications sent by current maid
   employerApplications: JobApplicationRecord[]; // Applications received for current employer's jobs
   applyForJob: (jobId: string, coverNote?: string) => Promise<{ success: boolean; error?: string }>;
+  payWorkerApplicationFee: (workerId: string, paynowRef?: string) => Promise<{ success: boolean; error?: string }>;
   chooseAndUnlockApplicant: (appId: string) => Promise<{ success: boolean; error?: string }>;
   submitCustomJobApplication: (appData: {
     jobId: string;
@@ -129,6 +131,8 @@ interface PlatformContextType {
 const PlatformContext = createContext<PlatformContextType | undefined>(undefined);
 
 export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { currentUser: authUser } = useAuth();
+
   // Load persisted state if available
   const [currentUser, setCurrentUser] = useState<PlatformUser>(() => {
     try {
@@ -139,7 +143,19 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     return INITIAL_PLATFORM_USERS[1];
   });
-  const [allUsers, setAllUsers] = useState<PlatformUser[]>(INITIAL_PLATFORM_USERS);
+
+  const [allUsers, setAllUsers] = useState<PlatformUser[]>(() => {
+    try {
+      const saved = localStorage.getItem("zmc_all_platform_users");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn("Could not load saved platform users:", e);
+    }
+    return INITIAL_PLATFORM_USERS;
+  });
 
   const [allMaidProfiles, setAllMaidProfiles] = useState<MaidProfileRecord[]>(() => {
     try {
@@ -150,9 +166,46 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     return INITIAL_MAID_PROFILES;
   });
-  const [allEmployerProfiles, setAllEmployerProfiles] = useState<EmployerProfileRecord[]>(INITIAL_EMPLOYER_PROFILES);
-  const [allJobs, setAllJobs] = useState<JobRecord[]>(INITIAL_JOBS);
-  const [allApplications, setAllApplications] = useState<JobApplicationRecord[]>(INITIAL_JOB_APPLICATIONS);
+
+  const [allEmployerProfiles, setAllEmployerProfiles] = useState<EmployerProfileRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem("zmc_employer_profiles");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn("Could not load saved employer profiles:", e);
+    }
+    return INITIAL_EMPLOYER_PROFILES;
+  });
+
+  const [allJobs, setAllJobs] = useState<JobRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem("zmc_jobs");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn("Could not load saved jobs:", e);
+    }
+    return INITIAL_JOBS;
+  });
+
+  const [allApplications, setAllApplications] = useState<JobApplicationRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem("zmc_applications");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn("Could not load saved applications:", e);
+    }
+    return INITIAL_JOB_APPLICATIONS;
+  });
+
   const [wallets, setWallets] = useState<Record<string, EmployerWalletRecord>>(() => {
     try {
       const saved = localStorage.getItem("zmc_wallets");
@@ -162,6 +215,7 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     return INITIAL_WALLETS;
   });
+
   const [transactions, setTransactions] = useState<PaymentTransactionRecord[]>(() => {
     try {
       const saved = localStorage.getItem("zmc_transactions");
@@ -171,6 +225,7 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
     return INITIAL_TRANSACTIONS;
   });
+
   const [pricingSettings, setPricingSettings] = useState<PlatformPricingSettings>(INITIAL_PLATFORM_PRICING);
   const [notifications, setNotifications] = useState<PlatformNotificationItem[]>(() => {
     try {
@@ -187,14 +242,146 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   useEffect(() => {
     try {
       localStorage.setItem("zmc_platform_user", JSON.stringify(currentUser));
+      localStorage.setItem("zmc_all_platform_users", JSON.stringify(allUsers));
+      localStorage.setItem("zmc_maid_profiles", JSON.stringify(allMaidProfiles));
+      localStorage.setItem("zmc_employer_profiles", JSON.stringify(allEmployerProfiles));
+      localStorage.setItem("zmc_jobs", JSON.stringify(allJobs));
+      localStorage.setItem("zmc_applications", JSON.stringify(allApplications));
       localStorage.setItem("zmc_wallets", JSON.stringify(wallets));
       localStorage.setItem("zmc_transactions", JSON.stringify(transactions));
       localStorage.setItem("zmc_notifications", JSON.stringify(notifications));
-      localStorage.setItem("zmc_maid_profiles", JSON.stringify(allMaidProfiles));
     } catch (e) {
       console.warn("Error saving platform state to localStorage:", e);
     }
-  }, [currentUser, wallets, transactions, notifications, allMaidProfiles]);
+  }, [currentUser, allUsers, allMaidProfiles, allEmployerProfiles, allJobs, allApplications, wallets, transactions, notifications]);
+
+  // Synchronize newly logged in / registered user so they appear on top
+  useEffect(() => {
+    if (!authUser) return;
+
+    const mappedRole: UserRoleType =
+      authUser.role === "Admin" ? "admin" :
+      authUser.role === "Worker" ? "maid" : "employer";
+
+    const platUser: PlatformUser = {
+      id: authUser.id,
+      role: mappedRole,
+      name: authUser.fullName,
+      email: authUser.email,
+      phone: authUser.phoneNumber || "+263 785 458 828",
+      whatsappNumber: authUser.phoneNumber || "+263 785 458 828",
+      avatarUrl: authUser.avatarUrl || "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=400",
+      createdAt: authUser.joinedDate || new Date().toISOString().split("T")[0],
+      status: authUser.approvalStatus === "Approved" ? "Active" : "Pending Approval",
+      isVerified: authUser.isVerified || authUser.approvalStatus === "Approved",
+      isNew: true,
+    };
+
+    setCurrentUser(platUser);
+
+    // Place newly logged-in/registered user at the very top of allUsers
+    setAllUsers((prev) => {
+      const filtered = prev.filter(
+        (u) => u.id !== authUser.id && u.email.toLowerCase() !== authUser.email.toLowerCase()
+      );
+      return [platUser, ...filtered];
+    });
+
+    // If Worker, ensure their profile is placed at the very top of allMaidProfiles
+    if (authUser.role === "Worker") {
+      setAllMaidProfiles((prev) => {
+        const existing = prev.find(
+          (m) => m.userId === authUser.id || m.email.toLowerCase() === authUser.email.toLowerCase()
+        );
+        const nameParts = authUser.fullName.split(" ");
+        const firstName = authUser.firstName || nameParts[0] || "Domestic";
+        const surname = authUser.surname || (nameParts.length > 1 ? nameParts.slice(1).join(" ") : "Worker");
+
+        const maidItem: MaidProfileRecord = {
+          id: existing ? existing.id : `maid-${authUser.id}`,
+          userId: authUser.id,
+          firstName,
+          surname,
+          dateOfBirth: authUser.dateOfBirth || existing?.dateOfBirth || "1997-04-12",
+          gender: "Female",
+          numberOfChildren: existing?.numberOfChildren ?? 1,
+          location: authUser.city || "Harare",
+          residentialAddress: authUser.suburb ? `${authUser.suburb}, ${authUser.city || "Harare"}` : (existing?.residentialAddress || "Harare"),
+          phoneNumber: authUser.phoneNumber || existing?.phoneNumber || "+263 785 458 828",
+          whatsappNumber: authUser.phoneNumber || existing?.whatsappNumber || "+263 785 458 828",
+          email: authUser.email,
+          profilePhoto: authUser.avatarUrl || existing?.profilePhoto || "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?auto=format&fit=crop&q=80&w=400",
+          portfolio: existing?.portfolio || [],
+          experienceYears: existing?.experienceYears || 3,
+          workExperience: existing?.workExperience || "3+ years residential housekeeping, laundry, cooking, and childcare.",
+          skills: existing?.skills || ["Deep Cleaning", "Laundry & Ironing", "Meal Cooking", "Childcare"],
+          previousEmployment: existing?.previousEmployment || [],
+          expectedSalary: existing?.expectedSalary || 200,
+          availability: "Available immediately",
+          preferredWorkLocation: authUser.city || "Harare",
+          willingToLiveIn: true,
+          willingToLiveOut: true,
+          shortAboutMe: existing?.shortAboutMe || `Reliable, verified domestic candidate in ${authUser.city || "Harare"}.`,
+          verificationStatus: (authUser.approvalStatus as any) || existing?.verificationStatus || "Approved",
+          documentStatus: existing?.documentStatus || {
+            nationalId: "Verified",
+            certificates: "Verified",
+            references: "Verified",
+            policeClearance: "Verified",
+          },
+          privateDocuments: existing?.privateDocuments || [],
+          unlockedByEmployerIds: existing?.unlockedByEmployerIds || [],
+          createdAt: existing?.createdAt || new Date().toISOString().split("T")[0],
+          updatedAt: new Date().toISOString().split("T")[0],
+          isDepositPaid: !!authUser.isDepositPaid || !!existing?.isDepositPaid,
+          isNew: true,
+        };
+
+        const filtered = prev.filter(
+          (m) => m.userId !== authUser.id && m.email.toLowerCase() !== authUser.email.toLowerCase()
+        );
+        return [maidItem, ...filtered];
+      });
+    }
+
+    // If Employer, ensure their profile is placed at the very top of allEmployerProfiles
+    if (authUser.role === "Employer") {
+      setAllEmployerProfiles((prev) => {
+        const existing = prev.find(
+          (e) => e.userId === authUser.id || e.email.toLowerCase() === authUser.email.toLowerCase()
+        );
+        const nameParts = authUser.fullName.split(" ");
+        const title = (["Mr", "Mrs", "Ms", "Dr", "Eng", "Prof"].find((t) => authUser.fullName.startsWith(t)) as any) || existing?.title || "Mrs";
+        const surname = authUser.surname || (nameParts.length > 1 ? nameParts.slice(1).join(" ") : authUser.fullName);
+
+        const employerItem: EmployerProfileRecord = {
+          id: existing ? existing.id : `emp-${authUser.id}`,
+          userId: authUser.id,
+          title,
+          surname,
+          phone: authUser.phoneNumber || existing?.phone || "+263 785 458 828",
+          whatsappNumber: authUser.phoneNumber || existing?.whatsappNumber || "+263 785 458 828",
+          email: authUser.email,
+          location: authUser.city || "Harare",
+          residentialAddress: authUser.suburb ? `${authUser.suburb}, ${authUser.city || "Harare"}` : (existing?.residentialAddress || "Harare"),
+          profilePhoto: authUser.avatarUrl || existing?.profilePhoto,
+          isSubscribed: existing?.isSubscribed ?? false,
+          subscriptionPlan: existing?.subscriptionPlan,
+          subscriptionExpiresAt: existing?.subscriptionExpiresAt,
+          status: "Approved",
+          accountStatus: "Approved",
+          createdAt: existing?.createdAt || new Date().toISOString().split("T")[0],
+          updatedAt: new Date().toISOString().split("T")[0],
+          isNew: true,
+        };
+
+        const filtered = prev.filter(
+          (e) => e.userId !== authUser.id && e.email.toLowerCase() !== authUser.email.toLowerCase()
+        );
+        return [employerItem, ...filtered];
+      });
+    }
+  }, [authUser]);
 
   // Sync wallet for current user
   const currentWallet: EmployerWalletRecord = wallets[currentUser.id] || {
@@ -234,6 +421,14 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   // Computed public maids with dynamic age calculation & privacy protection
   const publicMaids: PublicMaidProfile[] = allMaidProfiles
     .filter((m) => m.verificationStatus === "Approved" || currentUser.role === "admin" || m.userId === currentUser.id)
+    .sort((a, b) => {
+      // Newly registered or logged in workers MUST be at the top of the list!
+      if (a.isNew && !b.isNew) return -1;
+      if (!a.isNew && b.isNew) return 1;
+      const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return timeB - timeA;
+    })
     .map((m) => {
       const isEmployerSubscribed = currentUser.role === "employer" && !!currentEmployerProfile?.isSubscribed;
       const isUnlocked =
@@ -268,6 +463,8 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         verificationStatus: m.verificationStatus,
         isVerified: m.verificationStatus === "Approved",
         isFeatured: m.isFeatured,
+        isDepositPaid: m.isDepositPaid,
+        isNew: m.isNew,
         isUnlockedForCurrentEmployer: isUnlocked,
         unlockedPhone: isUnlocked ? m.phoneNumber : undefined,
         unlockedWhatsApp: isUnlocked ? m.whatsappNumber : undefined,
@@ -945,11 +1142,24 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const maidProfile = allMaidProfiles.find((m) => m.userId === currentUser.id);
     if (!maidProfile) return { success: false, error: "Please complete your Maid Profile before applying." };
 
+    // Strict Enforcement: Only workers who paid the $3 USD activation fee can apply for jobs
+    const hasPaidFee = !!maidProfile.isDepositPaid || !!(currentUser as any).isDepositPaid || !!authUser?.isDepositPaid;
+    if (!hasPaidFee) {
+      return {
+        success: false,
+        error: "WORKER_FEE_REQUIRED",
+      };
+    }
+
     // Check if already applied
     const alreadyApplied = allApplications.some((a) => a.jobId === jobId && a.maidId === currentUser.id);
     if (alreadyApplied) {
       return { success: false, error: "You have already submitted an application for this vacancy." };
     }
+
+    // Check if the hiring employer has an active subscription
+    const targetEmployer = allEmployerProfiles.find((e) => e.userId === job.employerId);
+    const isEmployerSubscribed = !!targetEmployer?.isSubscribed;
 
     const newApp: JobApplicationRecord = {
       id: `app-${Date.now()}`,
@@ -966,6 +1176,13 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       appliedDate: new Date().toISOString().split("T")[0],
       status: "Pending",
       coverNote: coverNote || maidProfile.shortAboutMe,
+      applicantPhone: maidProfile.phoneNumber || (currentUser as any).phone || "+263 785 458 828",
+      applicantWhatsApp: maidProfile.whatsappNumber || maidProfile.phoneNumber || (currentUser as any).phone || "+263 785 458 828",
+      applicantExperience: maidProfile.experienceYears ? `${maidProfile.experienceYears} Years` : "3 Years",
+      applicantSkills: maidProfile.skills?.join(", ") || "Housekeeping, Child Care, Cooking",
+      hasPoliceClearance: !!maidProfile.policeClearanceDocUrl || maidProfile.verificationStatus === "Approved",
+      hasReferences: (maidProfile.references?.length || 0) > 0,
+      isUnlocked: isEmployerSubscribed, // Automatically unlocked to subscribed employers!
     };
 
     setAllApplications((prev) => [newApp, ...prev]);
@@ -980,13 +1197,70 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       id: `notif-${Date.now()}`,
       userId: job.employerId,
       role: "employer",
-      title: "New Job Application Received",
-      message: `${maidProfile.firstName} ${maidProfile.surname} (Age: ${calculateAge(maidProfile.dateOfBirth)}) applied for '${job.title}'.`,
+      title: isEmployerSubscribed ? "New Application Received (Contact Unlocked ✓)" : "New Job Application Received",
+      message: isEmployerSubscribed
+        ? `${maidProfile.firstName} ${maidProfile.surname} applied for '${job.title}'. Because of your active employer subscription, their verified phone & WhatsApp are instantly unlocked!`
+        : `${maidProfile.firstName} ${maidProfile.surname} (Age: ${calculateAge(maidProfile.dateOfBirth)}) applied for '${job.title}'. Choose them in your dashboard to unlock verified contacts.`,
       type: "application",
       isRead: false,
       createdAt: new Date().toISOString().replace("T", " ").substring(0, 16),
     };
     setNotifications((prev) => [employerNotif, ...prev]);
+
+    return { success: true };
+  };
+
+  const payWorkerApplicationFee = async (workerId: string, paynowRef?: string): Promise<{ success: boolean; error?: string }> => {
+    const ref = paynowRef || `PNW-${Date.now().toString().slice(-6)}`;
+
+    // 1. Update in allMaidProfiles
+    setAllMaidProfiles((prev) =>
+      prev.map((m) =>
+        m.userId === workerId || m.id === workerId
+          ? { ...m, isDepositPaid: true, verificationStatus: "Approved" }
+          : m
+      )
+    );
+
+    // 2. Update currentUser if matching
+    if (currentUser.id === workerId) {
+      setCurrentUser((prev) => ({
+        ...prev,
+        isVerified: true,
+        status: "Active",
+      }));
+    }
+
+    // 3. Record in transactions
+    const newTx: PaymentTransactionRecord = {
+      id: `tx-${Date.now()}`,
+      userId: workerId,
+      userRole: "maid",
+      userName: currentUser.name || "Domestic Worker",
+      amount: 3.0,
+      currency: "USD",
+      service: "Worker Job Application Pass ($3.00 USD)",
+      paynowReference: ref,
+      pollUrl: `https://www.paynow.co.zw/Interface/CheckPayment/?guid=${ref}`,
+      status: "Paid",
+      paymentMethod: "Paynow",
+      date: new Date().toISOString().replace("T", " ").substring(0, 16),
+      isVerified: true,
+    };
+    setTransactions((prev) => [newTx, ...prev]);
+
+    // 4. Send confirmation notification
+    const notif: PlatformNotificationItem = {
+      id: `notif-${Date.now()}`,
+      userId: workerId,
+      role: "maid",
+      title: "Job Application Pass Activated! ✓",
+      message: "Your $3.00 USD Application Pass is verified and active! You can now apply for all employer vacancies across Zimbabwe, and your contact details will be automatically unlocked to subscribed employers.",
+      type: "payment",
+      isRead: false,
+      createdAt: new Date().toISOString().replace("T", " ").substring(0, 16),
+    };
+    setNotifications((prev) => [notif, ...prev]);
 
     return { success: true };
   };
@@ -1073,6 +1347,10 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const job = allJobs.find((j) => j.id === appData.jobId);
     if (!job) return { success: false, error: "Job vacancy not found." };
 
+    // Check if hiring employer is subscribed
+    const targetEmployer = allEmployerProfiles.find((e) => e.userId === job.employerId);
+    const isEmployerSubscribed = !!targetEmployer?.isSubscribed;
+
     const newApp: JobApplicationRecord = {
       id: `app-${Date.now()}`,
       maidId: currentUser.id || `worker-${Date.now()}`,
@@ -1096,7 +1374,7 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       applicantSkills: appData.skills,
       hasPoliceClearance: appData.hasPoliceClearance ?? true,
       hasReferences: appData.hasReferences ?? true,
-      isUnlocked: false,
+      isUnlocked: isEmployerSubscribed, // Auto-unlocked if employer subscribed
     };
 
     setAllApplications((prev) => [newApp, ...prev]);
@@ -1788,6 +2066,7 @@ export const PlatformProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         maidApplications,
         employerApplications,
         applyForJob,
+        payWorkerApplicationFee,
         chooseAndUnlockApplicant,
         submitCustomJobApplication,
         updateApplicationStatus,

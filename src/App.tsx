@@ -11,7 +11,6 @@ import { ArchitectureView } from "./components/architecture/ArchitectureView";
 import { WorkerDirectory } from "./components/marketplace/WorkerDirectory";
 import { AIVettingStudio } from "./components/marketplace/AIVettingStudio";
 import { PaymentsLedger } from "./components/marketplace/PaymentsLedger";
-import { AdminDashboard } from "./components/admin/AdminDashboard";
 import { PlatformAdminDashboard } from "./components/admin/PlatformAdminDashboard";
 import { EmployerDashboard } from "./components/employer/EmployerDashboard";
 import { MaidDashboard } from "./components/maid/MaidDashboard";

@@ -923,23 +923,13 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
                           <span>Renew 30 Days</span>
                         </button>
                       ) : (
-                        <div className="flex items-center space-x-1.5">
-                          <button
-                            onClick={() => setApplyingJob(job)}
-                            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center space-x-1 active:scale-95"
-                          >
-                            <Send className="w-3 h-3" />
-                            <span>Apply for Job</span>
-                          </button>
-                          <button
-                            onClick={() => handleWhatsAppApply(job)}
-                            className="px-2.5 py-1.5 bg-teal-50 hover:bg-teal-100 text-teal-800 font-bold text-xs rounded-xl border border-teal-200 transition-all flex items-center space-x-1"
-                            title="Apply via WhatsApp"
-                          >
-                            <MessageSquare className="w-3.5 h-3.5 text-teal-600" />
-                            <span className="hidden sm:inline">WhatsApp</span>
-                          </button>
-                        </div>
+                        <button
+                          onClick={() => setApplyingJob(job)}
+                          className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs rounded-xl shadow-md transition-all flex items-center space-x-1.5 active:scale-95"
+                        >
+                          <Send className="w-3 h-3" />
+                          <span>Apply for Vacancy</span>
+                        </button>
                       )}
 
                       <button
@@ -1610,22 +1600,14 @@ export const JobManagementModule: React.FC<JobManagementModuleProps> = ({ curren
                 </label>
               </div>
 
-              <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2">
+              <div className="pt-2">
                 <button
                   type="submit"
                   disabled={isSubmittingApp}
-                  className="w-full sm:flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
+                  className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2 disabled:opacity-50"
                 >
                   <Send className="w-4 h-4" />
-                  <span>{isSubmittingApp ? "Submitting..." : "Submit Application"}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleWhatsAppApply(applyingJob)}
-                  className="w-full sm:w-auto px-4 py-3 bg-teal-600 hover:bg-teal-700 text-white font-extrabold text-xs rounded-xl shadow-md transition-all flex items-center justify-center space-x-1.5 whitespace-nowrap"
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  <span>Apply via WhatsApp</span>
+                  <span>{isSubmittingApp ? "Submitting to Employer..." : "Submit Application Directly to Employer"}</span>
                 </button>
               </div>
             </form>
